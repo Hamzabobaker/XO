@@ -54,7 +54,7 @@ const evaluatePosition = (board: Cell[], player: 'X' | 'O'): number => {
     
     const playerCount = cells.filter(c => c === player).length;
     const opponentCount = cells.filter(c => c === opponent).length;
-    const emptyCount = cells.filter(c => c === null).length;
+    // (emptyCount was previously computed here but not used)
 
     // Player advantage
     if (opponentCount === 0) {
