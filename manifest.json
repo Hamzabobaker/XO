@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "XO Game",
+  "name": "XO - Modern Tic-Tac-Toe with Multiple Modes",
+  "description": "Play classic and advanced tic-tac-toe modes including Infinite, Blitz, and Mega Board",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +21,8 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#3B82F6",
+  "background_color": "#0F172A",
+  "orientation": "portrait",
+  "categories": ["games", "entertainment"]
 }
