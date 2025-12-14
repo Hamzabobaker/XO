@@ -8,12 +8,8 @@ import {
   IoPeople,
   IoHardwareChip,
   IoInformationCircle,
-  IoShuffle,
-  IoPlaySkipForward,
-  IoCloseCircle,
   IoPlay,
 } from "react-icons/io5";
-import { renderIcon } from "../utils/renderIcon";
 
 type GameMode = "vsplayer" | "vsbot";
 type Difficulty = "easy" | "normal" | "hard" | "impossible";
@@ -22,22 +18,18 @@ type Variant =
   | "infinite"
   | "blitz"
   | "mega"
-  | "doublemove"
   | "swap"
   | "reverse";
+type PlayerSymbol = "X" | "O";
 
 interface BlitzSettings {
   timePerMove: number;
   onTimeout: "skip" | "random" | "lose";
 }
 interface MegaBoardSettings {
-  boardSize: 4 | 5 | 7 | 8 | 9;
+  boardSize: 4 | 5 | 6 | 7 | 8 | 9;
   winLength: number;
 }
-interface DoubleMoveSettings {
-  turnsUntilDouble: number;
-}
-
 interface GameSettingsModalProps {
   visible: boolean;
   variant: Variant | null;
@@ -49,8 +41,17 @@ interface GameSettingsModalProps {
   t: (key: string) => string;
   blitzSettings: BlitzSettings;
   megaBoardSettings: MegaBoardSettings;
-  doubleMoveSettings: DoubleMoveSettings;
 }
+
+// ✅ PERSISTENT SETTINGS - stored outside component to remember between opens
+let savedSettings = {
+  // mode is NOT saved - always starts unselected
+  symbol: "X" as PlayerSymbol,
+  difficulty: "easy" as Difficulty, // ✅ Changed to "easy" as default
+  botStarts: false,
+  blitz: { timePerMove: 10, onTimeout: "lose" as "skip" | "random" | "lose" },
+  mega: { boardSize: 5 as 4 | 5 | 6 | 7 | 8 | 9, winLength: 4 },
+};
 
 export default function GameSettingsModal({
   visible,
@@ -63,46 +64,49 @@ export default function GameSettingsModal({
   t,
   blitzSettings: initialBlitzSettings,
   megaBoardSettings: initialMegaBoardSettings,
-  doubleMoveSettings: initialDoubleMoveSettings,
 }: GameSettingsModalProps) {
   const navigate = useNavigate();
 
   const [selectedMode, setSelectedMode] = useState<GameMode | null>(null);
-  const [selectedDifficulty, setSelectedDifficulty] =
-    useState<Difficulty>("normal");
-  const [blitzSettings, setBlitzSettings] = useState<BlitzSettings>(
-    initialBlitzSettings
-  );
-  const [megaBoardSettings, setMegaBoardSettings] =
-    useState<MegaBoardSettings>(initialMegaBoardSettings);
-  const [doubleMoveSettings, setDoubleMoveSettings] =
-    useState<DoubleMoveSettings>(initialDoubleMoveSettings);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>("normal");
+  const [selectedSymbol, setSelectedSymbol] = useState<PlayerSymbol>("X");
+  const [blitzSettings, setBlitzSettings] = useState<BlitzSettings>(initialBlitzSettings);
+  const [megaBoardSettings, setMegaBoardSettings] = useState<MegaBoardSettings>(initialMegaBoardSettings);
+  const [botStarts, setBotStarts] = useState(false);
 
-  useEffect(() => {
-    if (visible && variant) {
-      setSelectedMode(null);
-      setSelectedDifficulty(
-        (availableDifficulties?.[0] as Difficulty) || "normal"
-      );
-      setBlitzSettings(initialBlitzSettings);
-      setMegaBoardSettings(initialMegaBoardSettings);
-      setDoubleMoveSettings(initialDoubleMoveSettings);
-    }
-  }, [
-    visible,
-    variant,
-    availableDifficulties,
-    initialBlitzSettings,
-    initialMegaBoardSettings,
-    initialDoubleMoveSettings,
-  ]);
+  // ✅ Track if mode was JUST selected (for animation)
+  const [modeJustSelected, setModeJustSelected] = useState(false);
+
+useEffect(() => {
+  if (visible && variant) {
+    setSelectedMode(null); // ✅ Always reset mode to unselected
+    setSelectedSymbol(savedSettings.symbol);
+    setSelectedDifficulty(savedSettings.difficulty); // ✅ Use saved difficulty
+    setBlitzSettings(savedSettings.blitz);
+    // Sanitize saved mega settings to ensure winLength is valid for its boardSize
+    const size = savedSettings.mega.boardSize as number;
+    const minLength = size >= 7 ? 5 : 4;
+    let maxLength = 6;
+    if (size >= 8) maxLength = 8;
+    else if (size >= 7) maxLength = 7;
+    const allowed: number[] = [];
+    for (let i = minLength; i <= Math.min(size, maxLength); i++) allowed.push(i);
+    const sanitizedWin = allowed.includes(savedSettings.mega.winLength)
+      ? savedSettings.mega.winLength
+      : (minLength);
+    setMegaBoardSettings({
+      boardSize: savedSettings.mega.boardSize as MegaBoardSettings['boardSize'],
+      winLength: sanitizedWin,
+    });
+    setBotStarts(savedSettings.botStarts);
+    setModeJustSelected(false);
+  }
+}, [visible, variant]);
 
   const isComingSoon = variant === "swap" || variant === "reverse";
   const isMegaMode = variant === "mega";
   const isBlitzMode = variant === "blitz";
-  const isDoubleMoveMode = variant === "doublemove";
-  const isBotAvailable = !isMegaMode;
-  
+  const isBotAvailable = true;
 
   const difficultyOptions: Difficulty[] = (
     availableDifficulties && availableDifficulties.length > 0
@@ -115,10 +119,20 @@ export default function GameSettingsModal({
   const handleStartGame = () => {
     if (isComingSoon || !isModeChosen) return;
 
+  savedSettings = {
+  symbol: selectedSymbol, // ✅ Mode NOT saved
+  difficulty: selectedDifficulty,
+  botStarts,
+  blitz: blitzSettings,
+  mega: megaBoardSettings,
+};
+
     const params = new URLSearchParams({
       mode: selectedMode as string,
       difficulty: selectedDifficulty,
       variant: variant ?? "classic",
+      playerSymbol: selectedSymbol,
+      botStarts: botStarts.toString(),
     });
 
     if (isBlitzMode) {
@@ -131,40 +145,53 @@ export default function GameSettingsModal({
       params.append("winLength", megaBoardSettings.winLength.toString());
     }
 
-    if (isDoubleMoveMode) {
-      params.append(
-        "turnsUntilDouble",
-        doubleMoveSettings.turnsUntilDouble.toString()
-      );
-    }
-
     onClose();
     navigate(`/game?${params.toString()}`);
   };
 
   const getRecommendedWinLength = (size: number) => {
-    if (size === 4) return 3;
-    if (size === 5) return 4;
-    if (size === 7) return 5;
-    if (size === 8) return 5;
+    if (size <= 6) return 4; // keep 4 for small boards
+    // For 7×7 and above, prefer 5 as the recommended default
     return 5;
   };
 
   const getWinLengthOptions = (size: number) => {
-    const options = [];
-    for (let i = 3; i <= Math.min(size, 6); i++) {
-      options.push(i);
-    }
+    const options: number[] = [];
+    const minLength = size >= 7 ? 5 : 4; // remove 4 for 7×7+
+    let maxLength = 6;
+    if (size >= 8) maxLength = 8; // add 8 option starting at 8×8
+    else if (size >= 7) maxLength = 7;
+    const upper = Math.min(size, maxLength);
+    for (let i = minLength; i <= upper; i++) options.push(i);
     return options;
   };
 
-  const handleBoardSizeChange = (size: 4 | 5 | 7 | 8 | 9) => {
+  const handleBoardSizeChange = (size: 4 | 5 | 6 | 7 | 8 | 9) => {
     const recommended = getRecommendedWinLength(size);
     setMegaBoardSettings({
       boardSize: size,
       winLength: recommended,
     });
   };
+
+  // ✅ FIXED: Only trigger animation when mode is selected
+  const handleModeSelect = (mode: GameMode) => {
+    const wasUnselected = selectedMode === null;
+    setSelectedMode(mode);
+    if (wasUnselected) {
+      setModeJustSelected(true);
+      setTimeout(() => setModeJustSelected(false), 600);
+    }
+  };
+
+  // Calculate step numbers dynamically
+  let currentStep = 1;
+  const modeStep = currentStep++;
+  const symbolStep = isModeChosen ? currentStep++ : 0;
+  const botStartsStep = selectedMode === "vsbot" && isModeChosen ? currentStep++ : 0;
+  const difficultyStep = selectedMode === "vsbot" && isBotAvailable ? currentStep++ : 0;
+  const variantStep1 = isBlitzMode || isMegaMode ? currentStep++ : 0;
+  const variantStep2 = isMegaMode ? currentStep++ : 0;
 
   // Reusable Components
   const StepBadge = ({ number }: { number: number }) => (
@@ -185,157 +212,162 @@ export default function GameSettingsModal({
     </div>
   );
 
-  const OptionCard = ({
-    isSelected,
-    onClick,
+  const EnhancedCard = ({ children }: { children: React.ReactNode }) => (
+    <div
+      style={{
+        backgroundColor: theme.background,
+        border: `2px solid ${theme.border}`,
+        borderRadius: 16,
+        padding: 18,
+        marginBottom: 16,
+      }}
+    >
+      {children}
+    </div>
+  );
+
+  const EnhancedModeButton = ({
     icon,
     label,
+    sublabel,
+    isSelected,
+    onClick,
+    theme,
     disabled = false,
-  }: {
-    isSelected: boolean;
-    onClick: () => void;
-    icon: any;
-    label: string;
-    disabled?: boolean;
-  }) => (
-    <button
+  }: any) => (
+    <motion.button
+      whileHover={!disabled ? { y: -3, scale: 1.02 } : {}}
+      whileTap={!disabled ? { scale: 0.97 } : {}}
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       style={{
-        flex: 1,
-        padding: 12,
-        borderRadius: 12,
+        padding: 20,
+        borderRadius: 16,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        gap: 8,
-        border: `2px solid ${isSelected ? theme.primary : theme.border}`,
-        backgroundColor: isSelected ? theme.primary : theme.surface,
-        opacity: disabled ? 0.55 : 1,
-        cursor: disabled ? "default" : "pointer",
-        minHeight: 72,
-        transition: "all 0.2s",
+        gap: 12,
+        border: `3px solid ${isSelected ? theme.primary : theme.border}`,
+        background: isSelected
+          ? `linear-gradient(135deg, ${theme.primary}18 0%, ${theme.primary}0a 100%)`
+          : theme.surface,
+        cursor: disabled ? "not-allowed" : "pointer",
+        minHeight: 130,
+        opacity: disabled ? 0.5 : 1,
+        transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+        position: "relative",
+        overflow: "hidden",
+        boxShadow: isSelected
+          ? `0 8px 24px ${theme.primary}25, 0 0 0 1px ${theme.primary}30 inset`
+          : `0 2px 8px ${theme.shadow}`,
       }}
-      onMouseEnter={(e) =>
-        !disabled &&
-        !isSelected &&
-        (e.currentTarget.style.borderColor = theme.primary)
-      }
-      onMouseLeave={(e) =>
-        !disabled &&
-        !isSelected &&
-        (e.currentTarget.style.borderColor = theme.border)
-      }
     >
-      {/* Render the provided icon component (or fallback to renderIcon) */}
-      {typeof icon === "function" ? (
-        // icon is a React component (e.g. IoPeople)
-        (React.createElement(icon, {
-          size: 22,
-          color: disabled ? theme.textSecondary : isSelected ? "#FFF" : theme.primary,
-        }))
-      ) : (
-        // icon might be a name/string — use renderIcon helper
-        renderIcon(icon, { size: 22, color: disabled ? theme.textSecondary : isSelected ? "#FFF" : theme.primary })
+      {/* ✅ ONLY show glow if selected AND animation is active */}
+      {isSelected && modeJustSelected && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          style={{
+            position: "absolute",
+            inset: -2,
+            background: `radial-gradient(circle at 50% 50%, ${theme.primary}18, transparent 70%)`,
+            pointerEvents: "none",
+          }}
+        />
       )}
-      <span
+
+      <div
         style={{
-          color: disabled
-            ? theme.textSecondary
-            : isSelected
-            ? "#FFF"
-            : theme.text,
-          fontWeight: 600,
-          fontSize: 14,
-          textAlign: "center",
+          width: 52,
+          height: 52,
+          borderRadius: 26,
+          background: isSelected
+            ? `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`
+            : `${theme.primary}15`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: isSelected ? `0 6px 16px ${theme.primary}35` : "none",
+          transition: "all 0.25s",
         }}
       >
-        {label}
-      </span>
-    </button>
+        {React.createElement(icon as any, { size: 26, color: isSelected ? "#FFFFFF" : theme.primary })}
+      </div>
+
+      <div style={{ textAlign: "center" }}>
+        <div
+          style={{
+            fontSize: 16,
+            fontWeight: isSelected ? 800 : 700,
+            color: isSelected ? theme.primary : theme.text,
+            marginBottom: 5,
+            letterSpacing: "-0.2px",
+          }}
+        >
+          {label}
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            color: theme.textSecondary,
+            lineHeight: "16px",
+            fontWeight: 500,
+          }}
+        >
+          {sublabel}
+        </div>
+      </div>
+    </motion.button>
   );
 
-  const Chip = ({
-    isSelected,
-    onClick,
-    label,
-    disabled = false,
-  }: {
-    isSelected: boolean;
-    onClick: () => void;
-    label: string;
-    disabled?: boolean;
-  }) => (
-    <button
+  const EnhancedChip = ({ label, isSelected, onClick, theme, color, disabled = false }: any) => (
+    <motion.button
+      whileHover={!disabled ? { scale: 1.04, y: -2 } : {}}
+      whileTap={!disabled ? { scale: 0.96 } : {}}
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       style={{
-        padding: "10px 14px",
-        borderRadius: 20,
-        border: `2px solid ${isSelected ? theme.primary : theme.border}`,
-        backgroundColor: isSelected ? theme.primary : theme.surface,
-        color: isSelected ? "#FFF" : theme.text,
-        opacity: disabled ? 0.55 : 1,
-        cursor: disabled ? "default" : "pointer",
-        fontWeight: isSelected ? 600 : 500,
-        fontSize: 14,
-        transition: "all 0.2s",
-      }}
-      onMouseEnter={(e) => {
-        if (!disabled && !isSelected) {
-          e.currentTarget.style.borderColor = theme.primary;
-          e.currentTarget.style.backgroundColor = theme.primary + "15";
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!disabled && !isSelected) {
-          e.currentTarget.style.borderColor = theme.border;
-          e.currentTarget.style.backgroundColor = theme.surface;
-        }
+        padding: "16px 14px",
+        borderRadius: 14,
+        border: `3px solid ${isSelected ? (color || theme.primary) : theme.border}`,
+        background: isSelected
+          ? (color ? `${color}18` : `linear-gradient(135deg, ${theme.primary}18, ${theme.accent}0e)`)
+          : theme.surface,
+        color: isSelected ? (color || theme.primary) : theme.text,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        fontWeight: isSelected ? 800 : 600,
+        fontSize: 15,
+        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        opacity: disabled ? 0.5 : 1,
+        boxShadow: isSelected 
+          ? `0 4px 12px ${(color || theme.primary)}25, 0 0 0 1px ${(color || theme.primary)}20 inset`
+          : `0 2px 6px ${theme.shadow}`,
+        textAlign: 'center',
+        letterSpacing: '-0.2px',
       }}
     >
       {label}
-    </button>
+    </motion.button>
   );
 
-  const InfoBox = ({
-    icon,
-    text,
-  }: {
-    icon: any;
-    text: string;
-  }) => (
+  const InfoBox = ({ icon, text, theme }: any) => (
     <div
       style={{
         display: "flex",
         alignItems: "flex-start",
-        gap: 8,
-        backgroundColor: theme.primary + "15",
-        padding: 12,
-        borderRadius: 10,
-        marginTop: 12,
-        border: `1px solid ${theme.primary}30`,
+        gap: 10,
+        backgroundColor: `${theme.primary}10`,
+        padding: 14,
+        borderRadius: 12,
+        marginTop: 14,
+        border: `1.5px solid ${theme.primary}25`,
       }}
     >
-      {renderIcon(icon, { size: 18, color: theme.primary, style: { flexShrink: 0 } })}
-      <span style={{ fontSize: 13, color: theme.text, lineHeight: "18px" }}>
+      {React.createElement(icon as any, { size: 18, color: theme.primary, style: { flexShrink: 0, marginTop: 2 } })}
+      <span style={{ fontSize: 12, color: theme.text, lineHeight: "18px", flex: 1 }}>
         {text}
       </span>
-    </div>
-  );
-
-  const Card = ({ children }: { children: React.ReactNode }) => (
-    <div
-      style={{
-        backgroundColor: theme.background,
-        border: `1px solid ${theme.border}`,
-        borderRadius: 14,
-        padding: 14,
-        marginBottom: 14,
-      }}
-    >
-      {children}
     </div>
   );
 
@@ -364,13 +396,14 @@ export default function GameSettingsModal({
   const winLengthOptions = getWinLengthOptions(megaBoardSettings.boardSize);
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {visible && variant && (
         <motion.div
+          key="overlay"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.08 }}
           style={{
             position: "fixed",
             inset: 0,
@@ -384,29 +417,35 @@ export default function GameSettingsModal({
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0, opacity: 0 }}
+            key="modal"
+            initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 60, damping: 8 }}
+            exit={{ scale: 0.98, opacity: 0 }}
+            transition={{
+              duration: 0.2,
+              ease: "easeOut",
+            }}
             onClick={(e) => e.stopPropagation()}
             style={{
-              backgroundColor: theme.surface,
-              borderRadius: 20,
+              background: theme.surface,
+              borderRadius: 28,
+              border: `2px solid ${theme.cardBorder}`,
+              boxShadow: `0 20px 60px ${theme.shadow}, 0 0 0 1px ${theme.border}`,
               width: "100%",
               maxWidth: 520,
               overflow: "hidden",
               maxHeight: "85vh",
               display: "flex",
               flexDirection: "column",
-              boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
             }}
           >
             {/* Header */}
             <div
               style={{
-                padding: 18,
-                paddingBottom: 12,
-                borderBottom: `1px solid ${theme.border}`,
+                padding: 24,
+                paddingBottom: 16,
+                borderBottom: `2px solid ${theme.border}`,
+                background: `linear-gradient(135deg, ${theme.primary}05 0%, transparent 100%)`,
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "flex-start",
@@ -450,7 +489,7 @@ export default function GameSettingsModal({
                   flexShrink: 0,
                 }}
               >
-                {renderIcon(IoClose, { size: 22, color: theme.text })}
+                {React.createElement(IoClose as any, { size: 22, color: theme.text })}
               </button>
             </div>
 
@@ -459,13 +498,13 @@ export default function GameSettingsModal({
               style={{
                 flex: 1,
                 overflowY: "auto",
-                padding: 20,
-                paddingBottom: 28,
+                padding: 24,
+                paddingBottom: 32,
               }}
             >
               {isComingSoon ? (
                 <div style={{ textAlign: "center", padding: "60px 20px" }}>
-                  {renderIcon(IoTime, { size: 64, color: theme.textSecondary })}
+                  {React.createElement(IoTime as any, { size: 64, color: theme.textSecondary })}
                   <h3
                     style={{
                       color: theme.text,
@@ -482,231 +521,160 @@ export default function GameSettingsModal({
                 </div>
               ) : (
                 <>
-                  {/* Mode Selection */}
-                  <Card>
-                    <CardHeader stepNumber={1} title={t("mode")} />
-                    <div style={{ display: "flex", gap: 10 }}>
-                      <OptionCard
-                        isSelected={selectedMode === "vsplayer"}
-                        onClick={() => setSelectedMode("vsplayer")}
+                  {/* STEP 1: Mode Selection */}
+                  <EnhancedCard>
+                    <CardHeader stepNumber={modeStep} title={t("mode")} />
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <EnhancedModeButton
                         icon={IoPeople}
                         label={t("vsplayer")}
+                        sublabel={t("playTogether")}
+                        isSelected={selectedMode === "vsplayer"}
+                        onClick={() => handleModeSelect("vsplayer")}
+                        theme={theme}
                       />
-                      <OptionCard
-                        isSelected={selectedMode === "vsbot"}
-                        onClick={() =>
-                          isBotAvailable && setSelectedMode("vsbot")
-                        }
+                      <EnhancedModeButton
                         icon={IoHardwareChip}
-                        label={
-                          isBotAvailable ? t("vsbot") : t("underDevelopment")
-                        }
+                        label={t("vsbot")}
+                        sublabel={t("playAlone")}
+                        isSelected={selectedMode === "vsbot"}
+                        onClick={() => handleModeSelect("vsbot")}
+                        theme={theme}
                         disabled={!isBotAvailable}
                       />
                     </div>
-                    {selectedMode === "vsplayer" && (
-                      <InfoBox
-                        icon={IoInformationCircle}
-                        text={t("passDevice")}
-                      />
+                  </EnhancedCard>
+
+                  {/* ✅ ROLLING ANIMATION - Rest appears smoothly after mode selection */}
+                  <AnimatePresence>
+                    {isModeChosen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, ease: "easeOut" }}
+                      >
+                        {/* Symbol Selection */}
+                        <EnhancedCard>
+                          <CardHeader
+                            stepNumber={symbolStep}
+                            title={selectedMode === "vsbot" ? t("playAs") : t("startingPlayer")}
+                          />
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
+                            <EnhancedChip
+                              label="X"
+                              isSelected={selectedSymbol === "X"}
+                              onClick={() => setSelectedSymbol("X")}
+                              theme={theme}
+                              color={theme.xColor}
+                            />
+                            <EnhancedChip
+                              label="O"
+                              isSelected={selectedSymbol === "O"}
+                              onClick={() => setSelectedSymbol("O")}
+                              theme={theme}
+                              color={theme.oColor}
+                            />
+                          </div>
+                        </EnhancedCard>
+
+                        {/* Who Starts (VS Bot only) */}
+                        {selectedMode === "vsbot" && (
+                          <EnhancedCard>
+                            <CardHeader stepNumber={botStartsStep} title={t("whoStarts")} />
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
+                              <EnhancedChip
+                                label={t("playerStarts")}
+                                isSelected={botStarts === false}
+                                onClick={() => setBotStarts(false)}
+                                theme={theme}
+                              />
+                              <EnhancedChip
+                                label={t("botStarts")}
+                                isSelected={botStarts === true}
+                                onClick={() => setBotStarts(true)}
+                                theme={theme}
+                              />
+                            </div>
+                          </EnhancedCard>
+                        )}
+
+                        {/* Difficulty */}
+                        {selectedMode === "vsbot" && isBotAvailable && (
+                          <EnhancedCard>
+                            <CardHeader stepNumber={difficultyStep} title={t("difficulty")} />
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
+                              {difficultyOptions.map((diff) => (
+                                <EnhancedChip
+                                  key={diff}
+                                  label={t(diff)}
+                                  isSelected={selectedDifficulty === diff}
+                                  onClick={() => setSelectedDifficulty(diff as Difficulty)}
+                                  theme={theme}
+                                />
+                              ))}
+                            </div>
+                          </EnhancedCard>
+                        )}
+
+                        {/* Blitz Settings */}
+                        {isBlitzMode && (
+                          <EnhancedCard>
+                            <CardHeader stepNumber={variantStep1} title={t("timePerMove")} />
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                              {[5, 10, 15, 20, 30].map((time) => (
+                                <EnhancedChip
+                                  key={time}
+                                  label={`${time}${t("seconds")}`}
+                                  isSelected={blitzSettings.timePerMove === time}
+                                  onClick={() => setBlitzSettings({ ...blitzSettings, timePerMove: time })}
+                                  theme={theme}
+                                />
+                              ))}
+                            </div>
+                            <InfoBox icon={IoInformationCircle} text={t("blitzTimeoutInfo")} theme={theme} />
+                          </EnhancedCard>
+                        )}
+
+                        {/* Mega Board Settings */}
+                        {isMegaMode && (
+                          <>
+                            <EnhancedCard>
+                              <CardHeader stepNumber={variantStep1} title={t("boardSize")} />
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                                {([4, 5, 6, 7, 8, 9] as const).map((size) => (
+                                  <EnhancedChip
+                                    key={size}
+                                    label={`${size}×${size}`}
+                                    isSelected={megaBoardSettings.boardSize === size}
+                                    onClick={() => handleBoardSizeChange(size)}
+                                    theme={theme}
+                                  />
+                                ))}
+                              </div>
+                            </EnhancedCard>
+
+                            <EnhancedCard>
+                              <CardHeader stepNumber={variantStep2} title={t("customWinLength")} />
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+                                {winLengthOptions.map((length) => (
+                                  <EnhancedChip
+                                    key={length}
+                                    label={length.toString()}
+                                    isSelected={megaBoardSettings.winLength === length}
+                                    onClick={() => setMegaBoardSettings({ ...megaBoardSettings, winLength: length })}
+                                    theme={theme}
+                                  />
+                                ))}
+                              </div>
+                              <p style={{ fontSize: 13, color: theme.textSecondary, marginTop: 12, textAlign: "center" }}>
+                                {megaBoardSettings.winLength} {t("inARow")} {t("toWin")}
+                              </p>
+                            </EnhancedCard>
+                          </>
+                        )}
+                      </motion.div>
                     )}
-                  </Card>
-
-                  {/* Difficulty Selection */}
-                  {selectedMode === "vsbot" && isBotAvailable && (
-                    <Card>
-                      <CardHeader stepNumber={2} title={t("difficulty")} />
-                      <div
-                        style={{ display: "flex", flexWrap: "wrap", gap: 8 }}
-                      >
-                        {difficultyOptions.map((diff) => (
-                          <Chip
-                            key={diff}
-                            isSelected={selectedDifficulty === diff}
-                            onClick={() => setSelectedDifficulty(diff)}
-                            label={t(diff)}
-                            disabled={!isModeChosen}
-                          />
-                        ))}
-                      </div>
-                    </Card>
-                  )}
-
-                  {/* Blitz Settings */}
-                  {isBlitzMode && (
-                    <>
-                      <Card>
-                        <CardHeader
-                          stepNumber={selectedMode === "vsbot" ? 3 : 2}
-                          title={t("timePerMove")}
-                        />
-                        <div
-                          style={{ display: "flex", flexWrap: "wrap", gap: 8 }}
-                        >
-                          {[5, 10, 15, 20, 30].map((time) => (
-                            <Chip
-                              key={time}
-                              isSelected={blitzSettings.timePerMove === time}
-                              onClick={() =>
-                                setBlitzSettings({
-                                  ...blitzSettings,
-                                  timePerMove: time,
-                                })
-                              }
-                              label={`${time}${t("seconds")}`}
-                              disabled={!isModeChosen}
-                            />
-                          ))}
-                        </div>
-                      </Card>
-
-                      <Card>
-                        <CardHeader
-                          stepNumber={selectedMode === "vsbot" ? 4 : 3}
-                          title={t("onTimeout")}
-                        />
-                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                          <OptionCard
-                            isSelected={blitzSettings.onTimeout === "random"}
-                            onClick={() =>
-                              setBlitzSettings({
-                                ...blitzSettings,
-                                onTimeout: "random",
-                              })
-                            }
-                            icon={IoShuffle}
-                            label={t("randomMove")}
-                            disabled={!isModeChosen}
-                          />
-                          <OptionCard
-                            isSelected={blitzSettings.onTimeout === "skip"}
-                            onClick={() =>
-                              setBlitzSettings({
-                                ...blitzSettings,
-                                onTimeout: "skip",
-                              })
-                            }
-                            icon={IoPlaySkipForward}
-                            label={t("skipTurn")}
-                            disabled={!isModeChosen}
-                          />
-                          <OptionCard
-                            isSelected={blitzSettings.onTimeout === "lose"}
-                            onClick={() =>
-                              setBlitzSettings({
-                                ...blitzSettings,
-                                onTimeout: "lose",
-                              })
-                            }
-                            icon={IoCloseCircle}
-                            label={t("loseOnTimeout")}
-                            disabled={!isModeChosen}
-                          />
-                        </div>
-                      </Card>
-                    </>
-                  )}
-
-                  {/* Mega Board Settings */}
-                  {isMegaMode && (
-                    <>
-                      <Card>
-                        <CardHeader
-                          stepNumber={selectedMode === "vsbot" ? 3 : 2}
-                          title={t("boardSize")}
-                        />
-                        <div
-                          style={{ display: "flex", flexWrap: "wrap", gap: 8 }}
-                        >
-                          {([4, 5, 7, 8, 9] as const).map((size) => (
-                            <Chip
-                              key={size}
-                              isSelected={megaBoardSettings.boardSize === size}
-                              onClick={() => handleBoardSizeChange(size)}
-                              label={`${size}×${size}`}
-                              disabled={!isModeChosen}
-                            />
-                          ))}
-                        </div>
-                      </Card>
-
-                      <Card>
-                        <CardHeader
-                          stepNumber={selectedMode === "vsbot" ? 4 : 3}
-                          title={t("customWinLength")}
-                        />
-                        <div
-                          style={{ display: "flex", flexWrap: "wrap", gap: 8 }}
-                        >
-                          {winLengthOptions.map((length) => (
-                            <Chip
-                              key={length}
-                              isSelected={megaBoardSettings.winLength === length}
-                              onClick={() =>
-                                setMegaBoardSettings({
-                                  ...megaBoardSettings,
-                                  winLength: length,
-                                })
-                              }
-                              label={length.toString()}
-                              disabled={!isModeChosen}
-                            />
-                          ))}
-                        </div>
-                        <p
-                          style={{
-                            fontSize: 13,
-                            color: theme.textSecondary,
-                            marginTop: 8,
-                            textAlign: "center",
-                          }}
-                        >
-                          {megaBoardSettings.winLength} {t("inARow")}{" "}
-                          {t("toWin")}
-                        </p>
-                      </Card>
-                    </>
-                  )}
-
-                  {/* Double Move Settings */}
-                  {isDoubleMoveMode && (
-                    <Card>
-                      <CardHeader
-                        stepNumber={selectedMode === "vsbot" ? 3 : 2}
-                        title={t("doubleMoveTurns")}
-                      />
-                      <p
-                        style={{
-                          fontSize: 14,
-                          color: theme.textSecondary,
-                          marginBottom: 12,
-                        }}
-                      >
-                        {t("doubleMoveDescription")}
-                      </p>
-                      <div
-                        style={{ display: "flex", flexWrap: "wrap", gap: 8 }}
-                      >
-                        {[3, 4, 5, 6].map((turns) => (
-                          <Chip
-                            key={turns}
-                            isSelected={
-                              doubleMoveSettings.turnsUntilDouble === turns
-                            }
-                            onClick={() =>
-                              setDoubleMoveSettings({ turnsUntilDouble: turns })
-                            }
-                            label={`${turns} ${t("turns")}`}
-                            disabled={!isModeChosen}
-                          />
-                        ))}
-                      </div>
-                      <InfoBox
-                        icon={IoInformationCircle}
-                        text={t("doubleMoveDescription")}
-                      />
-                    </Card>
-                  )}
+                  </AnimatePresence>
                 </>
               )}
             </div>
@@ -727,9 +695,11 @@ export default function GameSettingsModal({
                 disabled={isComingSoon || !isModeChosen}
                 style={{
                   width: "100%",
-                  padding: 14,
-                  borderRadius: 12,
-                  backgroundColor: theme.primary,
+                  padding: 16,
+                  borderRadius: 14,
+                  background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.accent} 100%)`,
+                  boxShadow: `0 6px 20px ${theme.primary}30, 0 2px 8px ${theme.shadow}`,
+                  textShadow: "0 1px 2px rgba(0,0,0,0.2)",
                   color: "#FFF",
                   fontWeight: 700,
                   fontSize: 16,
@@ -740,25 +710,22 @@ export default function GameSettingsModal({
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 10,
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                   transition: "all 0.2s",
                 }}
                 onMouseEnter={(e) => {
                   if (!isComingSoon && isModeChosen) {
                     e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow =
-                      "0 6px 16px rgba(0,0,0,0.2)";
+                    e.currentTarget.style.boxShadow = "0 10px 30px rgba(0,0,0,0.22)";
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isComingSoon && isModeChosen) {
                     e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow =
-                      "0 4px 12px rgba(0,0,0,0.15)";
+                    e.currentTarget.style.boxShadow = `0 6px 20px ${theme.primary}30, 0 2px 8px ${theme.shadow}`;
                   }
                 }}
               >
-                {renderIcon(IoPlay, { size: 20 })}
+                {React.createElement(IoPlay as any, { size: 20 })}
                 {isComingSoon ? t("comingSoon") : t("startGame")}
               </button>
             </div>

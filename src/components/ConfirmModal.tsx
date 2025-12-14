@@ -1,7 +1,7 @@
 // src/components/ConfirmModal.tsx
 import React from 'react';
-import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { IoHelpCircle, IoClose, IoCheckmark } from 'react-icons/io5';
 
 interface ConfirmModalProps {
   visible: boolean;
@@ -22,103 +22,145 @@ export default function ConfirmModal({
   theme,
   t,
 }: ConfirmModalProps) {
-  if (!visible) return null;
-
-  // Inline simple help SVG to avoid react-icons TS issues
-  const HelpIcon = (
-    <svg
-      width="56"
-      height="56"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ display: 'block' }}
-      aria-hidden
-    >
-      <circle cx="12" cy="12" r="11" stroke={theme.secondary} strokeWidth="2" fill="none" />
-      <path
-        d="M9.5 9.5a1.75 1.75 0 1 1 3.5 0c0 .966-1 1.5-1.25 1.75-.3.3-.25 1.25-.25 1.25"
-        stroke={theme.secondary}
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      <circle cx="12" cy="17" r="0.75" fill={theme.secondary} />
-    </svg>
-  );
-
-  return ReactDOM.createPortal(
+  return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: theme.modalOverlay,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: 16,
-        }}
-      >
+      {visible && (
         <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 140, damping: 16 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
           style={{
-            background: theme.surface,
-            borderRadius: 16,
-            padding: 24,
-            width: '100%',
-            maxWidth: 420,
-            textAlign: 'center' as const,
-            boxShadow: `0 12px 30px ${theme.shadow}`,
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: theme.modalOverlay,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: 16,
           }}
+          onClick={onCancel}
         >
-          <div style={{ marginBottom: 12 }}>{HelpIcon}</div>
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0 }}
+            transition={{ type: 'spring', stiffness: 140, damping: 16, duration: 0.3 }}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: theme.surface,
+              borderRadius: 24,
+              padding: 32,
+              width: '100%',
+              maxWidth: 420,
+              textAlign: 'center' as const,
+              boxShadow: `0 12px 30px ${theme.shadow}`,
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ delay: 0.1, type: 'spring', stiffness: 120, damping: 12 }}
+              style={{ marginBottom: 16 }}
+            >
+              {React.createElement(IoHelpCircle as any, { size: 56, color: theme.secondary })}
+            </motion.div>
 
-          <div style={{ fontSize: 20, fontWeight: 700, color: theme.text }}>{title}</div>
-          <div style={{ color: theme.textSecondary, marginTop: 8 }}>{message}</div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15, duration: 0.2 }}
+              style={{ fontSize: 24, fontWeight: 700, color: theme.text, marginBottom: 8 }}
+            >
+              {title}
+            </motion.div>
 
-          <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
-            <button
-              onClick={onCancel}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.2 }}
               style={{
-                flex: 1,
-                padding: 12,
-                borderRadius: 10,
-                background: theme.surfaceVariant,
-                border: '1px solid ' + theme.border,
-                cursor: 'pointer',
+                color: theme.textSecondary,
+                marginBottom: 24,
+                fontSize: 16,
+                lineHeight: '22px',
               }}
             >
-              {t('cancel')}
-            </button>
+              {message}
+            </motion.div>
 
-            <button
-              onClick={onConfirm}
-              style={{
-                flex: 1,
-                padding: 12,
-                borderRadius: 10,
-                background: theme.secondary,
-                color: '#fff',
-                border: 'none',
-                cursor: 'pointer',
-              }}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25, duration: 0.2 }}
+              style={{ display: 'flex', gap: 12 }}
             >
-              {t('confirm')}
-            </button>
-          </div>
+              <button
+                onClick={onCancel}
+                style={{
+                  flex: 1,
+                  padding: '14px 20px',
+                  borderRadius: 12,
+                  background: theme.surfaceVariant,
+                  border: `2px solid ${theme.border}`,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  fontSize: 16,
+                  fontWeight: 600,
+                  color: theme.text,
+                }}
+                onMouseDown={(e) =>
+                  (e.currentTarget.style.transform = 'scale(0.95)')
+                }
+                onMouseUp={(e) =>
+                  (e.currentTarget.style.transform = 'scale(1)')
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.transform = 'scale(1)')
+                }
+              >
+                {React.createElement(IoClose as any, { size: 20, color: theme.text })}
+                <span>{t('cancel')}</span>
+              </button>
+
+              <button
+                onClick={onConfirm}
+                style={{
+                  flex: 1,
+                  padding: '14px 20px',
+                  borderRadius: 12,
+                  background: theme.secondary,
+                  color: '#fff',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  fontSize: 16,
+                  fontWeight: 600,
+                }}
+                onMouseDown={(e) =>
+                  (e.currentTarget.style.transform = 'scale(0.95)')
+                }
+                onMouseUp={(e) =>
+                  (e.currentTarget.style.transform = 'scale(1)')
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.transform = 'scale(1)')
+                }
+              >
+                {React.createElement(IoCheckmark as any, { size: 20, color: '#FFFFFF' })}
+                <span>{t('confirm')}</span>
+              </button>
+            </motion.div>
+          </motion.div>
         </motion.div>
-      </motion.div>
-    </AnimatePresence>,
-    // portal target
-    (typeof document !== 'undefined' && document.body) || (null as any)
+      )}
+    </AnimatePresence>
   );
 }

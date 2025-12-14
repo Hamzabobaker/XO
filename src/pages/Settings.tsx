@@ -8,321 +8,240 @@ import {
   IoMoon,
   IoGlobe,
   IoLanguage,
+  IoSettingsSharp,
 } from 'react-icons/io5';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context';
-import { renderIcon } from '../utils/renderIcon';
 
 export default function Settings() {
   const navigate = useNavigate();
-  const {
-    theme,
-    themeMode,
-    setThemeMode,
-    language,
-    setLanguage,
-    t,
-  } = useApp();
+  const { theme, themeMode, setThemeMode, language, setLanguage, t, dir } = useApp();
 
   const styles = getStyles(theme);
 
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, direction: dir }}>
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.4 }}
         style={styles.content}
       >
-        <motion.h2
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          style={styles.title}
-        >
-          {t('settings')}
-        </motion.h2>
-
+        {/* Header with icon */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          style={styles.section}
+          transition={{ delay: 0.1, duration: 0.4 }}
+          style={styles.header}
         >
-          <div style={styles.label}>{t('theme')}</div>
-          <div style={styles.options}>
-            <button
-              onClick={() => setThemeMode('auto')}
-              style={getOptionStyle(theme, themeMode === 'auto')}
-              onMouseEnter={(e) => {
-                if (themeMode !== 'auto') {
-                  e.currentTarget.style.borderColor = theme.primary;
-                  e.currentTarget.style.backgroundColor = theme.primary + '15';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (themeMode !== 'auto') {
-                  e.currentTarget.style.borderColor = theme.border;
-                  e.currentTarget.style.backgroundColor = theme.surface;
-                }
-              }}
-            >
-              {renderIcon(IoPhonePortraitOutline, {
-                size: 20,
-                color: themeMode === 'auto' ? '#FFFFFF' : theme.text,
-              })}
-              <span
-                style={getOptionTextStyle(theme, themeMode === 'auto')}
-              >
-                {t('auto')}
-              </span>
-            </button>
+          <motion.div
+            initial={{ scale: 0, rotate: -90 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{
+              type: 'spring',
+              stiffness: 150,
+              damping: 12,
+              delay: 0.15,
+            }}
+            style={styles.iconWrapper}
+          >
+            {React.createElement(IoSettingsSharp as any, { size: 56, color: theme.primary })}
+          </motion.div>
 
-            <button
-              onClick={() => setThemeMode('light')}
-              style={getOptionStyle(theme, themeMode === 'light')}
-              onMouseEnter={(e) => {
-                if (themeMode !== 'light') {
-                  e.currentTarget.style.borderColor = theme.primary;
-                  e.currentTarget.style.backgroundColor = theme.primary + '15';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (themeMode !== 'light') {
-                  e.currentTarget.style.borderColor = theme.border;
-                  e.currentTarget.style.backgroundColor = theme.surface;
-                }
-              }}
-            >
-              {renderIcon(IoSunny, {
-                size: 20,
-                color: themeMode === 'light' ? '#FFFFFF' : theme.text,
-              })}
-              <span
-                style={getOptionTextStyle(theme, themeMode === 'light')}
-              >
-                {t('light')}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setThemeMode('dark')}
-              style={getOptionStyle(theme, themeMode === 'dark')}
-              onMouseEnter={(e) => {
-                if (themeMode !== 'dark') {
-                  e.currentTarget.style.borderColor = theme.primary;
-                  e.currentTarget.style.backgroundColor = theme.primary + '15';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (themeMode !== 'dark') {
-                  e.currentTarget.style.borderColor = theme.border;
-                  e.currentTarget.style.backgroundColor = theme.surface;
-                }
-              }}
-            >
-              {renderIcon(IoMoon, {
-                size: 20,
-                color: themeMode === 'dark' ? '#FFFFFF' : theme.text,
-              })}
-              <span
-                style={getOptionTextStyle(theme, themeMode === 'dark')}
-              >
-                {t('dark')}
-              </span>
-            </button>
-          </div>
+          <h2 style={styles.title}>{t('settings')}</h2>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          style={styles.section}
-        >
-          <div style={styles.label}>{t('language')}</div>
-          <div style={styles.options}>
-            <button
-              onClick={() => setLanguage('auto')}
-              style={getOptionStyle(theme, language === 'auto')}
-              onMouseEnter={(e) => {
-                if (language !== 'auto') {
-                  e.currentTarget.style.borderColor = theme.primary;
-                  e.currentTarget.style.backgroundColor = theme.primary + '15';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (language !== 'auto') {
-                  e.currentTarget.style.borderColor = theme.border;
-                  e.currentTarget.style.backgroundColor = theme.surface;
-                }
-              }}
-            >
-              {renderIcon(IoGlobe, {
-                size: 20,
-                color: language === 'auto' ? '#FFFFFF' : theme.text,
-              })}
-              <span
-                style={getOptionTextStyle(theme, language === 'auto')}
-              >
-                {t('auto')}
-              </span>
-            </button>
+        {/* Theme Section */}
+        <Section
+          label={t('theme')}
+          options={[
+            { icon: IoPhonePortraitOutline, label: t('auto'), value: 'auto' },
+            { icon: IoSunny, label: t('light'), value: 'light' },
+            { icon: IoMoon, label: t('dark'), value: 'dark' },
+          ]}
+          selected={themeMode}
+          onSelect={setThemeMode}
+          theme={theme}
+          delay={0.3}
+        />
 
-            <button
-              onClick={() => setLanguage('en')}
-              style={getOptionStyle(theme, language === 'en')}
-              onMouseEnter={(e) => {
-                if (language !== 'en') {
-                  e.currentTarget.style.borderColor = theme.primary;
-                  e.currentTarget.style.backgroundColor = theme.primary + '15';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (language !== 'en') {
-                  e.currentTarget.style.borderColor = theme.border;
-                  e.currentTarget.style.backgroundColor = theme.surface;
-                }
-              }}
-            >
-              {renderIcon(IoLanguage, {
-                size: 20,
-                color: language === 'en' ? '#FFFFFF' : theme.text,
-              })}
-              <span
-                style={getOptionTextStyle(theme, language === 'en')}
-              >
-                {t('english')}
-              </span>
-            </button>
+        {/* Language Section */}
+        <Section
+          label={t('language')}
+          options={[
+            { icon: IoGlobe, label: t('auto'), value: 'auto' },
+            { icon: IoLanguage, label: t('english'), value: 'en' },
+            { icon: IoLanguage, label: t('arabic'), value: 'ar' },
+          ]}
+          selected={language}
+          onSelect={setLanguage}
+          theme={theme}
+          delay={0.4}
+        />
 
-            <button
-              onClick={() => setLanguage('ar')}
-              style={getOptionStyle(theme, language === 'ar')}
-              onMouseEnter={(e) => {
-                if (language !== 'ar') {
-                  e.currentTarget.style.borderColor = theme.primary;
-                  e.currentTarget.style.backgroundColor = theme.primary + '15';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (language !== 'ar') {
-                  e.currentTarget.style.borderColor = theme.border;
-                  e.currentTarget.style.backgroundColor = theme.surface;
-                }
-              }}
-            >
-              {renderIcon(IoLanguage, {
-                size: 20,
-                color: language === 'ar' ? '#FFFFFF' : theme.text,
-              })}
-              <span
-                style={getOptionTextStyle(theme, language === 'ar')}
-              >
-                {t('arabic')}
-              </span>
-            </button>
-          </div>
-        </motion.div>
-
+        {/* Back Button */}
         <motion.button
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.5 }}
+          whileHover={{ scale: 1.03, y: -2 }}
+          whileTap={{ scale: 0.97 }}
           style={styles.backButton}
           onClick={() => navigate(-1)}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = `0 6px 16px ${theme.shadow}`;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = `0 4px 8px ${theme.shadow}`;
-          }}
         >
-          {renderIcon(IoArrowBack, { size: 20, color: '#FFFFFF' })}
-          <span>{t('back')}</span>
+          {/* Arabic: text LEFT, arrow RIGHT (pointing left) | English: arrow LEFT, text RIGHT */}
+              {dir === 'rtl' ? (
+            <>
+              <span>{t('back')}</span>
+              {React.createElement(IoArrowBack as any, { size: 20, color: '#FFFFFF' })} {/* ✅ NO FLIP - normal left arrow on right side */}
+            </>
+          ) : (
+            <>
+              {React.createElement(IoArrowBack as any, { size: 20, color: '#FFFFFF' })}
+              <span>{t('back')}</span>
+            </>
+          )}
         </motion.button>
       </motion.div>
     </div>
   );
 }
 
+// Section Component
+function Section({ label, options, selected, onSelect, theme, delay }: any) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
+      style={{
+        marginBottom: 24,
+        backgroundColor: theme.surface,
+        padding: 20,
+        borderRadius: 20,
+        border: `2px solid ${theme.cardBorder}`,
+        boxShadow: `0 4px 16px ${theme.cardShadow}, 0 2px 4px ${theme.shadow}`,
+      }}
+    >
+      <div style={{ fontSize: 18, fontWeight: 700, color: theme.text, marginBottom: 16 }}>
+        {label}
+      </div>
+
+      {/* Keep buttons LTR even in RTL */}
+      <div style={{ display: 'flex', flexDirection: 'row', gap: 12, direction: 'ltr' }}>
+        {options.map((opt: any) => (
+          <motion.button
+            key={opt.value}
+            whileHover={{ scale: 1.03, y: -2 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{
+              scale: { type: 'spring', stiffness: 400, damping: 25 },
+              y: { type: 'spring', stiffness: 400, damping: 25 },
+            }}
+            onClick={() => onSelect(opt.value)}
+            style={getOptionStyle(theme, selected === opt.value)}
+          >
+            {React.createElement(opt.icon as any, {
+              size: 20,
+              color: selected === opt.value ? '#FFFFFF' : theme.text,
+            })}
+            <span style={getOptionTextStyle(theme, selected === opt.value)}>
+              {opt.label}
+            </span>
+          </motion.button>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
 const getOptionStyle = (theme: any, selected: boolean) => ({
   flex: 1,
-  padding: '14px',
-  borderRadius: 12,
-  backgroundColor: selected ? theme.primary : theme.surface,
+  padding: '16px 12px',
+  borderRadius: 14,
+  background: selected
+    ? `linear-gradient(135deg, ${theme.primary} 0%, ${theme.accent} 100%)`
+    : theme.surface,
   border: `2px solid ${selected ? theme.primary : theme.border}`,
   display: 'flex',
-  flexDirection: 'row' as const,
+  flexDirection: 'column' as const,
   alignItems: 'center',
   justifyContent: 'center',
-  gap: 6,
+  gap: 8,
   boxShadow: selected
-    ? `0 4px 12px ${theme.primary}30`
-    : `0 2px 4px ${theme.shadow}`,
+    ? `0 6px 16px ${theme.primary}30, 0 2px 6px ${theme.shadow}`
+    : `0 2px 8px ${theme.cardShadow}`,
   cursor: 'pointer',
   transition: 'all 0.2s',
+  WebkitTapHighlightColor: 'transparent',
+  outline: 'none',
+  userSelect: 'none' as const,
 });
 
 const getOptionTextStyle = (theme: any, selected: boolean) => ({
   fontSize: 14,
   color: selected ? '#FFFFFF' : theme.text,
-  fontWeight: selected ? 600 : 500,
+  fontWeight: selected ? 700 : 600,
+  textShadow: selected ? '0 1px 2px rgba(0,0,0,0.2)' : 'none',
 });
 
 const getStyles = (theme: any) => ({
   container: {
     minHeight: '100vh',
-    backgroundColor: theme.background,
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    position: 'relative' as const,
+    overflow: 'auto',
+    background: 'transparent',
   },
   content: {
-    maxWidth: 400,
+    maxWidth: 480,
     width: '100%',
+    position: 'relative' as const,
+    zIndex: 1,
+  },
+  header: {
+    textAlign: 'center' as const,
+    marginBottom: 40,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+  },
+  iconWrapper: {
+    marginBottom: 20,
+    filter: `drop-shadow(0 4px 12px ${theme.primary}40)`,
   },
   title: {
-    fontSize: 36,
-    fontWeight: 'bold' as const,
-    color: theme.text,
-    textAlign: 'center' as const,
+    fontSize: 48,
+    fontWeight: 900,
     margin: 0,
-    marginBottom: 40,
-  },
-  section: {
-    marginBottom: 30,
-  },
-  label: {
-    fontSize: 18,
-    fontWeight: 600,
+    padding: 0,
+    letterSpacing: '-1px',
     color: theme.text,
-    marginBottom: 12,
-  },
-  options: {
-    display: 'flex',
-    flexDirection: 'row' as const,
-    gap: 10,
+    position: 'relative' as const,
   },
   backButton: {
-    padding: 14,
-    borderRadius: 12,
-    backgroundColor: theme.primary,
+    padding: '16px 24px',
+    borderRadius: 14,
+    background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.accent} 100%)`,
     color: '#FFFFFF',
-    fontWeight: 600,
+    fontWeight: 700,
     fontSize: 16,
     border: 'none',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    marginTop: 20,
-    boxShadow: `0 4px 8px ${theme.shadow}`,
+    gap: 10,
+    boxShadow: `0 6px 20px ${theme.primary}30, 0 2px 8px ${theme.shadow}`,
     transition: 'all 0.2s',
     width: '100%',
+    WebkitTapHighlightColor: 'transparent',
+    outline: 'none',
+    userSelect: 'none' as const,
+    textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+    // Keep default flex direction, handle with conditional rendering
   },
 });

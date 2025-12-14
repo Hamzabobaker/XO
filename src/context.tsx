@@ -1,18 +1,20 @@
-import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+// src/context.tsx
+import React, { createContext, ReactNode, useContext, useState, useEffect } from 'react';
 import { darkTheme, lightTheme, Theme } from './theme';
 
 type Language = 'en' | 'ar' | 'auto';
 type ThemeMode = 'light' | 'dark' | 'auto';
 type GameMode = 'vsplayer' | 'vsbot';
 type Difficulty = 'easy' | 'normal' | 'hard' | 'impossible';
-type Variant = 'classic' | 'infinite' | 'blitz' | 'mega' | 'doublemove' | 'swap' | 'reverse';
+type Variant = 'classic' | 'infinite' | 'blitz' | 'mega' | 'swap' | 'reverse';
 
-interface Translations { [key: string]: string; }
+interface Translations {
+  [key: string]: string;
+}
 
-// keep your translations exactly as provided (omitted here to save space).
-// Paste the exact translations object from your original context.tsx into the `translations` const below.
-const translations: Record<'en'|'ar', Translations> = {
- en: {
+// --- Translations ---
+const translations: Record<'en' | 'ar', Translations> = {
+  en: {
     title: 'XO',
     play: 'Play Game',
     settings: 'Settings',
@@ -25,14 +27,12 @@ const translations: Record<'en'|'ar', Translations> = {
     infinite: 'Infinite',
     blitz: 'Blitz',
     mega: 'Mega Board',
-    doublemove: 'Double Move',
     swap: 'Swap',
     reverse: 'Reverse',
     classicDesc: 'Traditional 3×3 tic-tac-toe. Get three in a row to win.',
     infiniteDesc: 'Only 3 marks allowed. placing a 4th removes your oldest.',
     blitzDesc: 'Fast-paced with time limits. Make your move before time runs out!',
     megaDesc: 'Larger boards with customizable win conditions.',
-    doublemoveDesc: 'Get an extra move every few turns. Plan your double-move strategy!',
     swapDesc: 'Players swap pieces or sides after few moves. Adapt your strategy!',
     reverseDesc: 'Avoid making three in a row. Force your opponent to win.',
     easy: 'Easy',
@@ -61,8 +61,8 @@ const translations: Record<'en'|'ar', Translations> = {
     arabic: 'Arabic',
     xTurn: "X's Turn",
     oTurn: "O's Turn",
-    gameDescription: 'A modern tic-tac-toe game with multiple exciting modes',
-    builtWith: 'Built with React Native & Expo',
+    gameDescription: 'A tic-tac-toe game with multiple modes',
+    builtWith: 'Built with React & TypeScript',
     quitGameTitle: 'Quit Game?',
     quitGameMessage: 'Are you sure you want to quit this game?',
     quitAppTitle: 'Quit App?',
@@ -74,8 +74,8 @@ const translations: Record<'en'|'ar', Translations> = {
     playTogether: 'Play with a friend on the same device',
     features: 'Features',
     multiLanguage: 'Supports English and Arabic languages',
-    darkMode: 'Beautiful light and dark themes',
-    smartAI: 'Intelligent AI opponents with varying difficulty',
+    darkMode: 'light and dark themes',
+    smartAI: 'AI opponents with varying difficulty',
     createdBy: 'Created by Hamza',
     creatorDesc: 'Just another developer, quietly making apps, wondering if anyone will notice… probably not, but hey, at least I tried',
     modeDetails: 'Mode Details',
@@ -114,21 +114,33 @@ const translations: Record<'en'|'ar', Translations> = {
     size8x8: '8×8',
     size9x9: '9×9',
     customWinLength: 'Win Length',
-    doubleMoveSettings: 'Double Move Settings',
-    movesUntilDouble: 'Moves Until Double',
-    doubleMoveTurns: 'Double Move Every',
     turns: 'turns',
-    doubleActive: 'Double Move Active!',
-    nextDoubleIn: 'Next double in',
+    botThinking: 'Bot is thinking...',
+    nextPowerUp: 'Next power-up in',
     move: 'move',
     moves: 'moves',
-    doubleMoveDescription: 'Players get an extra move every N turns',
-    doubleMoveExample: 'With {turns} turns: After every {turns} moves, the current player gets to move twice in a row!',
+    used: 'Used',
+    ready: 'Ready',
     chooseGameMode: 'Choose Game Mode',
     selectDifficulty: 'Select Difficulty',
+    whoStarts: 'Who Starts?',
+    playerStarts: 'I Start',
+    botStarts: 'Bot Starts',
     whenTimeRunsOut: 'When Time Runs Out',
     comingSoonMessage: 'This mode is still under development and will be available in a future update.',
     winLength: 'Win Length',
+    playAs: 'Play As',
+    playAsDescription: 'Choose which symbol you want to play as',
+    startingPlayer: 'Starting Player',
+    startingPlayerDescription: 'Choose which player starts first',
+    player: 'Player',
+    blitzTimeoutInfo: 'If time runs out, you lose instantly',
+    youWin: 'You Win!',
+    youLose: 'You Lost!',
+    victory: 'Victory',
+    defeat: 'Defeat',
+    playAgain: 'Play Again',
+    mainMenu: 'Main Menu',
   },
   ar: {
     title: 'XO',
@@ -143,14 +155,12 @@ const translations: Record<'en'|'ar', Translations> = {
     infinite: 'لا نهائي',
     blitz: 'سريع',
     mega: 'لوحة كبيرة',
-    doublemove: 'حركة مزدوجة',
     swap: 'تبديل',
     reverse: 'عكسي',
     classicDesc: 'لعبة XO التقليدية 3×3. احصل على ثلاثة في صف للفوز.',
     infiniteDesc: 'يمكنك وضع 3 علامات فقط. وضع علامة رابعة يزيل أقدم علامة.',
     blitzDesc: 'سريع الوتيرة مع حدود زمنية. قم بحركتك قبل نفاد الوقت!',
     megaDesc: 'لوحات أكبر مع شروط فوز قابلة للتخصيص.',
-    doublemoveDesc: 'احصل على حركة إضافية كل عدة دورات. خطط لاستراتيجية حركتك المزدوجة!',
     swapDesc: 'يتبادل اللاعبون القطع أو الجوانب بعد عدة حركات. تكيّف مع استراتيجيتك!',
     reverseDesc: 'تجنَّب تكوين ثلاثة في صف. اجبر خصمك على الفوز.',
     easy: 'سهل',
@@ -167,8 +177,8 @@ const translations: Record<'en'|'ar', Translations> = {
     restart: 'إعادة',
     winner: 'الفائز',
     draw: 'تعادل',
-    xWins: 'X فاز!',
-    oWins: 'O فاز!',
+    xWins: 'فاز X!',
+    oWins: 'فاز O!',
     itsADraw: 'تعادل!',
     theme: 'المظهر',
     light: 'فاتح',
@@ -179,12 +189,13 @@ const translations: Record<'en'|'ar', Translations> = {
     arabic: 'العربية',
     xTurn: 'دور X',
     oTurn: 'دور O',
-    gameDescription: 'لعبة XO حديثة مع أوضاع متعددة ومثيرة',
-    builtWith: 'مبني بواسطة React Native و Expo',
+    gameDescription: 'لعبة XO مع أوضاع متعددة',
+    builtWith: 'مبني بـ React و TypeScript',
     quitGameTitle: 'إنهاء اللعبة؟',
     quitGameMessage: 'هل أنت متأكد من إنهاء هذه اللعبة؟',
     quitAppTitle: 'إنهاء التطبيق؟',
     quitAppMessage: 'هل أنت متأكد من الخروج؟',
+    nextPowerUp: 'القوة التالية في',
     cancel: 'إلغاء',
     confirm: 'تأكيد',
     gameModes: 'أوضاع اللعب',
@@ -192,25 +203,31 @@ const translations: Record<'en'|'ar', Translations> = {
     playTogether: 'العب مع صديق على نفس الجهاز',
     features: 'المميزات',
     multiLanguage: 'يدعم اللغتين الإنجليزية والعربية',
-    darkMode: 'مظاهر فاتحة وداكنة جميلة',
+    darkMode: 'مظاهر فاتحة وداكنة',
     smartAI: 'خصوم ذكاء اصطناعي بمستويات صعوبة متنوعة',
     createdBy: 'صنع بواسطة حمزة',
-    creatorDesc: 'مجرد مطور آخر، يصنع تطبيقاته بهدوء… واضح إنك حوّلت للغة العربية بس عشان تعرف إيش مكتوب هنا، المرة الجاية حاول تتعلم الإنجليزي',
+    creatorDesc: 'أنا مجرد مطوّر آخر، أصنع تطبيقاتي بهدوء وأتساءل إن كان أحد سيلاحظ... ربما لا، لكن على الأقل حاولت',
     modeDetails: 'تفاصيل الوضع',
     viewRules: 'عرض القواعد',
+    whoStarts: 'من يبدأ؟',
+    playerStarts: 'أنا أبدأ',
+    botStarts: 'الروبوت يبدأ',
     comingSoon: 'قريباً',
+    used: 'مستخدم',
+    ready: 'جاهز',
     underDevelopment: 'تحت التطوير',
     availableIn: 'متاح في',
     classicMode: 'الوضع الكلاسيكي',
     infiniteMode: 'الوضع اللانهائي',
     passDevice: 'مرر الجهاز للاعب الآخر بعد دورك',
     yourTurn: 'دورك',
+    botThinking: 'الروبوت يفكر...',
     timerDuration: 'مدة المؤقت',
     perMove: 'لكل حركة',
     totalTime: 'الوقت الكلي',
     seconds: 'ث',
     timeUp: 'انتهى الوقت!',
-    playerTimeout: 'نفذ وقت اللاعب',
+    playerTimeout: 'انتهى وقت اللاعب',
     timeWarning: 'أسرع!',
     blitzSettings: 'إعدادات السريع',
     timePerMove: 'الوقت لكل حركة',
@@ -232,21 +249,28 @@ const translations: Record<'en'|'ar', Translations> = {
     size8x8: '8×8',
     size9x9: '9×9',
     customWinLength: 'طول الفوز',
-    doubleMoveSettings: 'إعدادات الحركة المزدوجة',
-    movesUntilDouble: 'الحركات حتى المزدوجة',
-    doubleMoveTurns: 'حركة مزدوجة كل',
     turns: 'دورة',
-    doubleActive: 'الحركة المزدوجة نشطة!',
-    nextDoubleIn: 'المزدوجة التالية في',
+    
     move: 'حركة',
     moves: 'حركات',
-    doubleMoveDescription: 'يحصل اللاعب على حركة إضافية بعد كل N دورة',
-    doubleMoveExample: 'مع {turns} دورات: بعد كل {turns} حركة، يحصل اللاعب الحالي على فرصة للحركة مرتين متتاليتين!',
+    
     chooseGameMode: 'اختر وضع اللعبة',
     selectDifficulty: 'اختر الصعوبة',
     whenTimeRunsOut: 'عند نفاد الوقت',
     comingSoonMessage: 'هذا الوضع لا يزال قيد التطوير وسيكون متاحاً في تحديث مستقبلي.',
     winLength: 'طول الفوز',
+    playAs: 'العب كـ',
+    playAsDescription: 'اختر الرمز الذي تريد اللعب به',
+    startingPlayer: 'اللاعب البادئ',
+    startingPlayerDescription: 'اختر أي لاعب يبدأ أولاً',
+    player: 'لاعب',
+    blitzTimeoutInfo: 'إذا نفذ الوقت، تخسر فوراً',
+    youWin: 'لقد فزت!',
+    youLose: 'لقد خسرت!',
+    victory: 'انتصار',
+    defeat: 'هزيمة',
+    playAgain: 'العب مرة أخرى',
+    mainMenu: 'القائمة الرئيسية',
   },
 };
 
@@ -254,21 +278,21 @@ export interface BlitzSettings {
   timePerMove: number;
   onTimeout: 'skip' | 'random' | 'lose';
 }
+
 export interface MegaBoardSettings {
-  boardSize: 4 | 5 | 7 | 8 | 9;
+  boardSize: 4 | 5 | 6 | 7 | 8 | 9;
   winLength: number;
-}
-export interface DoubleMoveSettings {
-  turnsUntilDouble: number;
 }
 
 interface AppContextType {
   theme: Theme;
+  actualThemeMode: ThemeMode;
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: string) => string;
+  dir: 'ltr' | 'rtl';
   selectedMode: GameMode;
   setSelectedMode: (mode: GameMode) => void;
   selectedDifficulty: Difficulty;
@@ -279,20 +303,17 @@ interface AppContextType {
   setBlitzSettings: (settings: BlitzSettings) => void;
   megaBoardSettings: MegaBoardSettings;
   setMegaBoardSettings: (settings: MegaBoardSettings) => void;
-  doubleMoveSettings: DoubleMoveSettings;
-  setDoubleMoveSettings: (settings: DoubleMoveSettings) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  // browser prefers-color-scheme
-  const prefersDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const deviceColorScheme = prefersDark ? 'dark' : 'light';
+  // Detect device theme & language
+  const prefersDark = typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+  const deviceColorScheme: ThemeMode = prefersDark ? 'dark' : 'light';
+  const deviceLanguage: Language = (navigator.language || 'en').startsWith('ar') ? 'ar' : 'en';
 
-  const deviceLanguage = (navigator.language || 'en').startsWith('ar') ? 'ar' : 'en';
-
-
+  // --- State ---
   const [themeMode, setThemeMode] = useState<ThemeMode>('auto');
   const [language, setLanguage] = useState<Language>('auto');
   const [selectedMode, setSelectedModeState] = useState<GameMode>('vsplayer');
@@ -300,17 +321,36 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [selectedVariant, setSelectedVariantState] = useState<Variant>('classic');
   const [blitzSettings, setBlitzSettings] = useState<BlitzSettings>({ timePerMove: 10, onTimeout: 'random' });
   const [megaBoardSettings, setMegaBoardSettings] = useState<MegaBoardSettings>({ boardSize: 5, winLength: 4 });
-  const [doubleMoveSettings, setDoubleMoveSettings] = useState<DoubleMoveSettings>({ turnsUntilDouble: 6 });
 
-  const actualThemeMode = themeMode === 'auto' ? (deviceColorScheme === 'dark' ? 'dark' : 'light') : themeMode;
+  // ✅ Sync language to localStorage for index.html
+  useEffect(() => {
+    try {
+      localStorage.setItem('xo-game-language', language);
+    } catch (e) {
+      // Ignore localStorage errors
+    }
+  }, [language]);
+
+  // --- Compute actual theme & language ---
+  const actualThemeMode = themeMode === 'auto' ? deviceColorScheme : themeMode;
   const theme = actualThemeMode === 'light' ? lightTheme : darkTheme;
-
   const actualLanguage = language === 'auto' ? deviceLanguage : language;
+  const dir: 'ltr' | 'rtl' = actualLanguage === 'ar' ? 'rtl' : 'ltr';
 
+  // --- Apply theme & direction ---
+  useEffect(() => {
+    const html = document.documentElement;
+    html.classList.remove('light-mode', 'dark-mode');
+    html.classList.add(actualThemeMode === 'dark' ? 'dark-mode' : 'light-mode');
+    html.setAttribute('dir', dir); // handles Arabic flipping automatically
+  }, [actualThemeMode, dir]);
+
+  // --- Translation function ---
   const t = (key: string): string => {
-    return (translations as any)[actualLanguage]?.[key] ?? (translations as any).en?.[key] ?? key;
+    return translations[actualLanguage]?.[key] ?? translations.en?.[key] ?? key;
   };
 
+  // --- Difficulty / Variant safety rules ---
   const setSelectedDifficulty = (diff: Difficulty) => {
     if (diff === 'impossible' && selectedVariant !== 'classic') {
       setSelectedDifficultyState('hard');
@@ -318,35 +358,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
     setSelectedDifficultyState(diff);
   };
+
   const setSelectedVariant = (variant: Variant) => {
     if (variant !== 'classic' && selectedDifficulty === 'impossible') {
       setSelectedDifficultyState('hard');
     }
     setSelectedVariantState(variant);
   };
+
   const setSelectedMode = (mode: GameMode) => setSelectedModeState(mode);
 
   return (
-    <AppContext.Provider value={{
-      theme,
-      themeMode,
-      setThemeMode,
-      language,
-      setLanguage,
-      t,
-      selectedMode,
-      setSelectedMode,
-      selectedDifficulty,
-      setSelectedDifficulty,
-      selectedVariant,
-      setSelectedVariant,
-      blitzSettings,
-      setBlitzSettings,
-      megaBoardSettings,
-      setMegaBoardSettings,
-      doubleMoveSettings,
-      setDoubleMoveSettings,
-    }}>
+    <AppContext.Provider
+      value={{
+        theme,
+        actualThemeMode,
+        themeMode,
+        setThemeMode,
+        language,
+        setLanguage,
+        t,
+        dir,
+        selectedMode,
+        setSelectedMode,
+        selectedDifficulty,
+        setSelectedDifficulty,
+        selectedVariant,
+        setSelectedVariant,
+        blitzSettings,
+        setBlitzSettings,
+        megaBoardSettings,
+        setMegaBoardSettings,
+      }}
+    >
       {children}
     </AppContext.Provider>
   );

@@ -1,12 +1,12 @@
+// src/components/ModeCard.tsx
 import React from 'react';
-import { IconType } from 'react-icons';
-import { renderIcon } from '../utils/renderIcon';
+import { motion } from 'framer-motion';
 
 interface ModeCardProps {
   id: string;
   title: string;
   description: string;
-  icon: IconType | React.ElementType; // Icon component
+  icon: any;
   isSelected: boolean;
   isComingSoon?: boolean;
   badge?: string;
@@ -14,22 +14,58 @@ interface ModeCardProps {
   onLongPress?: () => void;
   theme: any;
   t: (key: string) => string;
+  isRTL?: boolean;
 }
 
 export default function ModeCard({
   title,
   description,
-  icon: Icon,
+  icon,
   isSelected,
   isComingSoon = false,
   badge,
   onPress,
   theme,
   t,
+  isRTL = false,
 }: ModeCardProps) {
   return (
-    <div
+    <motion.div
+      whileHover={!isComingSoon ? { y: -4, scale: 1.02 } : {}}
+      whileTap={!isComingSoon ? { scale: 0.98 } : {}}
+      transition={{
+        scale: { duration: 0.2, ease: 'easeOut' },
+        y: { duration: 0 },
+      }}
       onClick={isComingSoon ? undefined : onPress}
+      onTouchStart={(e) => {
+        if (!isComingSoon) {
+          e.currentTarget.style.borderColor = theme.primary;
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = `0 8px 16px ${theme.shadow}`;
+        }
+      }}
+      onTouchEnd={(e) => {
+        if (!isComingSoon) {
+          e.currentTarget.style.borderColor = isSelected ? theme.primary : theme.border;
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = `0 2px 8px ${theme.shadow}`;
+        }
+      }}
+      onMouseEnter={(e) => {
+        if (!isComingSoon) {
+          e.currentTarget.style.borderColor = theme.primary;
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = `0 8px 16px ${theme.shadow}`;
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isComingSoon) {
+          e.currentTarget.style.borderColor = isSelected ? theme.primary : theme.border;
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = `0 2px 8px ${theme.shadow}`;
+        }
+      }}
       style={{
         backgroundColor: isSelected ? theme.primary + '15' : theme.surface,
         borderRadius: 16,
@@ -42,8 +78,30 @@ export default function ModeCard({
         transition: 'all 0.2s ease',
         display: 'flex',
         flexDirection: 'column',
+        boxShadow: isSelected
+          ? `0 8px 24px ${theme.primary}20, 0 4px 8px ${theme.shadow}`
+          : `0 4px 12px ${theme.cardShadow}, 0 2px 4px ${theme.shadow}`,
+        WebkitTapHighlightColor: 'transparent',
+        outline: 'none',
+        userSelect: 'none' as const,
       }}
     >
+      {!isComingSoon && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileHover={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+          style={{
+            position: 'absolute' as const,
+            inset: -2,
+            background: `linear-gradient(135deg, ${theme.primary}20 0%, ${theme.accent}15 100%)`,
+            borderRadius: 16,
+            pointerEvents: 'none' as const,
+            filter: 'blur(8px)',
+          }}
+        />
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
         <div
           style={{
@@ -54,9 +112,11 @@ export default function ModeCard({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            transition: 'all 0.2s',
+            backdropFilter: 'blur(6px)',
           }}
         >
-          {renderIcon(Icon, { size: 28, color: isSelected ? '#FFFFFF' : theme.primary })}
+          {React.createElement(icon as any, { size: 28, color: isSelected ? '#FFFFFF' : theme.primary })}
         </div>
         {badge && (
           <div
@@ -77,6 +137,7 @@ export default function ModeCard({
           fontSize: 16,
           fontWeight: 600,
           color: isComingSoon ? theme.textSecondary : theme.text,
+          margin: 0,
           marginBottom: 6,
           overflow: 'hidden',
           whiteSpace: 'nowrap',
@@ -96,6 +157,8 @@ export default function ModeCard({
           display: '-webkit-box',
           WebkitLineClamp: 3,
           WebkitBoxOrient: 'vertical',
+          margin: 0,
+          flex: 1,
         }}
       >
         {description}
@@ -106,7 +169,8 @@ export default function ModeCard({
           style={{
             position: 'absolute',
             top: 8,
-            right: 8,
+            left: isRTL ? 8 : undefined,
+            right: isRTL ? undefined : 8,
             backgroundColor: theme.textSecondary,
             padding: '4px 10px',
             borderRadius: 12,
@@ -117,6 +181,6 @@ export default function ModeCard({
           </span>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
