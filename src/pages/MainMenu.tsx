@@ -1,28 +1,21 @@
 // src/pages/MainMenu.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { IoPlayCircle, IoSettingsSharp, IoInformationCircle } from 'react-icons/io5';
-import ConfirmModal from '../components/ConfirmModal';
 import { useApp } from '../context';
-
 export default function MainMenu() {
   const navigate = useNavigate();
-  const { theme, t, dir, actualThemeMode } = useApp(); // dir = 'ltr' or 'rtl'
-  const [quitVisible, setQuitVisible] = useState(false);
+  const { theme, t, dir, actualThemeMode, playSound } = useApp(); // dir = 'ltr' or 'rtl'
   const [isAnimating, setIsAnimating] = useState(true);
   const [playEntrance, setPlayEntrance] = useState(false);
-
-  // Watch `#root` for the `visible` class and trigger entrance animations when added
   useEffect(() => {
     const root = document.getElementById('root');
     if (!root) return;
-
     if (root.classList.contains('visible')) {
       setPlayEntrance(true);
       return;
     }
-
     const obs = new MutationObserver(muts => {
       for (const m of muts) {
         if (m.type === 'attributes' && root.classList.contains('visible')) {
@@ -32,36 +25,27 @@ export default function MainMenu() {
         }
       }
     });
-
     obs.observe(root, { attributes: true, attributeFilter: ['class'] });
     return () => obs.disconnect();
   }, []);
-
-  // Disable buttons while entrance animation runs
   useEffect(() => {
     if (!playEntrance) return;
     setIsAnimating(true);
-    const t = setTimeout(() => setIsAnimating(false), 900);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setIsAnimating(false), 900);
+    return () => clearTimeout(timer);
   }, [playEntrance]);
-
-  const buttons = [
-    { Icon: IoPlayCircle, text: t('play'), action: () => navigate('/play'), style: 'primary', gradient: true },
-    { Icon: IoSettingsSharp, text: t('settings'), action: () => navigate('/settings'), style: 'secondary', gradient: false },
-    { Icon: IoInformationCircle, text: t('about'), action: () => navigate('/about'), style: 'secondary', gradient: false },
-  ];
-
-  const handleQuit = () => {
-    setQuitVisible(false);
-    window.close();
-  };
-
-  const styles = getStyles(theme);
-
+  const buttons = useMemo(
+    () => [
+      { Icon: IoPlayCircle, text: t('play'), action: () => navigate('/play'), style: 'primary', gradient: true },
+      { Icon: IoSettingsSharp, text: t('settings'), action: () => navigate('/settings'), style: 'secondary', gradient: false },
+      { Icon: IoInformationCircle, text: t('about'), action: () => navigate('/about'), style: 'secondary', gradient: false },
+    ],
+    [navigate, t]
+  );
+  const styles = useMemo(() => getStyles(theme), [theme]);
   return (
     <div style={styles.container}>
       <div style={styles.content}>
-        {/* Header */}
         <div style={styles.header}>
           <motion.h1
             initial="hidden"
@@ -74,7 +58,6 @@ export default function MainMenu() {
           >
             {t('title')}
           </motion.h1>
-
           <motion.p
             initial="hidden"
             animate={playEntrance ? 'visible' : 'hidden'}
@@ -87,22 +70,18 @@ export default function MainMenu() {
             {t('gameDescription')}
           </motion.p>
         </div>
-
-        {/* Menu Buttons */}
         <div style={styles.menu}>
           {buttons.map((btn, i) => {
             const Icon = btn.Icon;
             const isSecondary = btn.style === 'secondary';
             const iconColor = isSecondary && actualThemeMode === 'light' ? '#000' : '#FFFFFF';
             const textColor = isSecondary && actualThemeMode === 'light' ? '#000' : '#FFFFFF';
-
             const iconBackground =
               isSecondary
                 ? (typeof theme.primary === 'string' && /^#/.test(theme.primary)
                     ? `${theme.primary}10`
                     : theme.surfaceVariant)
                 : 'rgba(255, 255, 255, 0.2)';
-
             return (
               <motion.div
                 key={i}
@@ -125,10 +104,12 @@ export default function MainMenu() {
                     ...styles.button,
                     ...(isSecondary ? styles.buttonSecondary : {}),
                     ...(btn.gradient ? styles.buttonGradient : {}),
-                    // layout based on direction
                     flexDirection: dir === 'rtl' ? 'row-reverse' : 'row',
                   }}
-                  onClick={btn.action}
+                  onClick={() => {
+                    playSound('tap');
+                    btn.action();
+                  }}
                   disabled={isAnimating}
                 >
                   <div
@@ -161,8 +142,6 @@ export default function MainMenu() {
             );
           })}
         </div>
-
-        {/* Footer */}
         <motion.div
           initial="hidden"
           animate={playEntrance ? 'visible' : 'hidden'}
@@ -172,23 +151,12 @@ export default function MainMenu() {
           }}
           style={styles.footer}
         >
-          <span style={styles.footerText}>v1.1.0</span>
+          <span style={styles.footerText}>v1.2.0</span>
         </motion.div>
       </div>
-
-      <ConfirmModal
-        visible={quitVisible}
-        title={t('quitAppTitle')}
-        message={t('quitAppMessage')}
-        onConfirm={handleQuit}
-        onCancel={() => setQuitVisible(false)}
-        theme={theme}
-        t={t}
-      />
     </div>
   );
 }
-
 const getStyles = (theme: any) => ({
   container: {
     minHeight: '100vh',

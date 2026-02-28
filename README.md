@@ -1,294 +1,138 @@
-## Author
+# XO Game
 
-**Hamza**
+XO is a multi-mode tic-tac-toe game by Hamza, built around fast matches, strong AI, and a polished mobile-friendly interface.
 
-# XO - Modern Tic-Tac-Toe Game
+## Core Gameplay
 
-A Tic-Tac-Toe game built with React and TypeScript, featuring multiple game modes, AI opponents with adjustable difficulty, and a beautiful, responsive UI.
+- Local play: Player vs Player
+- Solo play: Player vs Bot
+- Symbol choice: X or O
+- Starting side selection in bot matches
+- Restart and quit controls during every match
 
-## Features
+## Game Modes
 
-### Game Modes
-- **Classic** - Traditional 3×3 Tic-Tac-Toe
-- **Infinite** - Only 3 marks allowed per player; placing a 4th removes your oldest
-- **Blitz** - Fast-paced mode with time limits (5-30 seconds per move)
-- **Mega Board** - Larger boards (4×4 to 9×9) with customizable win conditions
-- **Swap** *(Coming Soon)* - Players swap pieces after a few moves
-- **Reverse** *(Coming Soon)* - Avoid making three in a row
+### Classic
+- Standard 3x3 board
+- First to connect 3 wins
 
-### AI Opponents
-- **4 Difficulty Levels**: Easy, Normal, Hard, Impossible
-- **Smart AI with Fork Detection** - Advanced AI that creates and blocks multi-directional threats
-- **Adaptive Strategy** - AI adjusts thinking time based on board size and time remaining (Blitz mode)
-- **Minimax Algorithm** - Uses alpha-beta pruning for optimal moves
+### Infinite
+- 3x3 board
+- Each side can keep only 3 marks on the board
+- Placing a 4th mark removes that side's oldest mark
+- Oldest active mark is visually highlighted
 
-### Customization
-- **Dark/Light Themes** with smooth transitions
-- **Multi-Language Support** - English and Arabic (RTL support)
-- **Persistent Settings** - Your preferences are remembered between sessions
-- **Smooth Animations** - Framer Motion powered transitions
-
-### Advanced Features
-- **VS Player & VS Bot** modes
-- **Choose starting player** (X/O and who goes first)
-- **Transparent oldest marks** in Infinite mode
-- **Winning line animations** with color-matched effects
-- **Responsive design** - Works on all screen sizes
-- **Bot thinking indicator** with spinner
-- **Confetti celebration** on victory
-
----
-
-## Tech Stack
-
-- **React 18** - UI framework
-- **TypeScript** - Type safety
-- **React Router v6** - Navigation
-- **Framer Motion v11** - Animations
-- **React Icons** - Icon library
-- **Create React App** - Build tooling
-
----
-
-## Installation
-
-### Prerequisites
-- Node.js 16+ and npm/yarn
-
-### Steps
-
-1. **Clone the repository**
-```bash
-   git clone https://github.com/yourusername/xo-game.git
-   cd xo-game
-```
-
-2. **Install dependencies**
-```bash
-   npm install
-   # or
-   yarn install
-```
-
-3. **Start the development server**
-```bash
-   npm start
-   # or
-   yarn start
-```
-
-4. **Open your browser**
-   Navigate to `http://localhost:3000`
-
----
-
-## Project Structure
-```
-XO/
-├── public/
-│   ├── index.html              # Main HTML with loading screen
-│   └── ...
-├── src/
-│   ├── components/
-│   │   ├── BlitzTimer.tsx      # Chess-style timer with 00.00 format
-│   │   ├── Board.tsx           # Game board with animations
-│   │   ├── ConfirmModal.tsx    # Confirmation dialogs
-│   │   ├── GameSettingsModal.tsx # Game setup with rolling animations
-│   │   ├── ModeCard.tsx        # Mode selection cards
-│   │   ├── ResultModal.tsx     # Win/loss/draw modal with confetti
-│   │   └── WinLine.tsx         # SVG winning line animation
-│   │
-│   ├── pages/
-│   │   ├── About.tsx           # Credits and info page
-│   │   ├── Game.tsx            # Main gameplay logic
-│   │   ├── MainMenu.tsx        # Home screen
-│   │   ├── Play.tsx            # Mode selection screen
-│   │   └── Settings.tsx        # Theme and language settings
-│   │
-│   ├── utils/
-│   │   └── ai.ts               # Minimax AI with fork detection
-│   │
-│   ├── App.tsx                 # Main app with routing
-│   ├── context.tsx             # Global state (theme, language, settings)
-│   ├── index.css               # Global styles
-│   ├── index.tsx               # Entry point
-│   └── theme.ts                # Light/Dark theme definitions
-│
-├── package.json
-├── tsconfig.json
-└── README.md
-```
-
----
-
-## How to Play
-
-### Classic Mode
-1. Select **VS Player** or **VS Bot**
-2. Choose your symbol (X or O)
-3. Select difficulty (if playing vs bot)
-4. First to get 3 in a row wins!
-
-### Infinite Mode
-- Each player can only have **3 marks** on the board
-- Placing a 4th mark removes your oldest one
-- Strategy changes as marks disappear!
-
-### Blitz Mode
-- Set time per move (5-30 seconds)
-- Make your move before time runs out
-- Fast thinking required!
+### Blitz
+- 3x3 board with per-turn countdown
+- Supported move timer options: 5s, 10s, 15s, 20s, 30s
+- Timeout ends the round as a loss for the side that ran out of time
 
 ### Mega Board
-- Choose board size (4×4 to 9×9)
-- Customize win length (4-7 in a row)
-- Larger boards require deeper strategy
+- Board sizes: 4x4, 5x5, 6x6, 7x7, 8x8, 9x9
+- Configurable win length based on board size
+- Dynamic board scaling for different screens
 
----
+### Drop Grid (Gravity)
+- Pieces are dropped by column
+- Marks fall to the lowest available cell
+- Includes column indicators and drop animation
 
-## AI Implementation
+### Reverse
+- Misere rule set
+- Making three in a row loses; opponent is declared winner
 
-### Algorithm
-The AI uses **Minimax with Alpha-Beta Pruning** for optimal move selection:
-```typescript
-minimax(board, depth, isMaximizing, alpha, beta)
-  ├─ Check win/loss/draw
-  ├─ Evaluate position
-  └─ Recursively search best moves
-```
+## Bot System
 
-### Fork Detection (Mega Board)
-For win lengths 3-5, the AI:
-1. **Detects forks** - Moves that create 2+ winning threats
-2. **Blocks opponent forks** - Prevents multi-threat setups
-3. **Prevents fork patterns** - Stops early fork preparation
+- Difficulties: Easy, Normal, Hard, Impossible
+- Tactical behavior includes winning move priority, blocking, anti-fork logic, and variant-specific heuristics
+- Exact solver logic for key 3x3 variants on Impossible difficulty
+- Extended search for Mega Board and Infinite with time budgets and cache reuse
+- Visible "Bot is thinking..." state during bot turns
 
-### Difficulty Levels
-- **Easy** - 70% random moves
-- **Normal** - 50% optimal, 50% random
-- **Hard** - 80% optimal with occasional mistakes
-- **Impossible** - Perfect play with full minimax search
+### AI Decision Model
 
----
+- Core search uses minimax with alpha-beta pruning
+- Search output is blended with tactical heuristics for practical move quality
+- Move generation and win-line combinations are cached to reduce repeated computation
+- Difficulty scaling is not only depth-based; it also adjusts move accuracy and selection sharpness
 
-## Configuration
+### Difficulty Behavior
 
-### Customizable Settings
-All stored in `context.tsx`:
-- **Theme Mode** - Auto, Light, Dark
-- **Language** - Auto, English, Arabic
-- **Blitz Time** - 5, 10, 15, 20, 30 seconds
-- **Mega Board Size** - 4×4 to 9×9
-- **Win Length** - 4 to 7 in a row
+- Easy:
+  - Lower tactical consistency
+  - Higher chance to choose non-optimal but still legal and plausible moves
+- Normal:
+  - Balanced between strong tactical play and occasional misses
+  - Better blocking and fork awareness than Easy
+- Hard:
+  - High tactical reliability
+  - Strong fork creation and prevention behavior
+- Impossible:
+  - Uses exact solving paths in supported 3x3 variants
+  - Uses deeper iterative search and larger candidate pools in larger-board modes
 
-Settings are **persisted** between sessions (except game mode selection).
+### Variant-Specific AI
 
----
+- Classic (3x3):
+  - Uses tactical checks first (immediate wins/blocks/forks)
+  - Uses minimax scoring for deeper selection
+  - Impossible resolves through exact 3x3 search
+- Blitz:
+  - Uses classic tactical engine with variant timing context
+  - Bot move scheduling adapts to remaining clock
+- Infinite:
+  - Evaluates move expiry effects (oldest-mark removal) as part of planning
+  - Uses dedicated minimax and position scoring for expiring-piece states
+- Drop Grid (Gravity):
+  - Generates legal moves from column drops only
+  - Uses gravity-aware immediate win/block/fork checks
+  - Impossible uses exact 3x3 solving for gravity rules
+- Reverse:
+  - Inverts terminal win interpretation (forming three is losing)
+  - Includes reverse-specific exact evaluation path for strong endgame decisions
+- Mega Board:
+  - Uses iterative deepening minimax with time caps
+  - Expands top candidate pool based on board size, win length, and difficulty
+  - Combines strategic scores with tactical safety checks (threats, forks, risk filtering)
 
-## Theming
+### Performance and Stability
 
-### Color Palette
+- Shared memoization caches are reused during bot search
+- Time budgets are applied to expensive searches to keep gameplay responsive
+- Candidate ordering and pruning are used to reach stronger moves earlier
+- Search loops include periodic yield checkpoints to avoid long blocking runs
 
-**Dark Theme:**
-```typescript
-{
-  background: '#0A0E1A',
-  surface: '#151B2E',
-  primary: '#60A5FA',
-  secondary: '#F87171',
-  accent: '#A78BFA',
-  xColor: '#60A5FA',
-  oColor: '#F87171'
-}
-```
+## Match Presentation
 
-**Light Theme:**
-```typescript
-{
-  background: '#EEF2FF',
-  surface: '#FFFFFF',
-  primary: '#3B82F6',
-  secondary: '#EF4444',
-  accent: '#8B5CF6',
-  xColor: '#3B82F6',
-  oColor: '#EF4444'
-}
-```
+- Winner/draw detection with animated win line
+- Result modal for victory, defeat, or draw
+- Quit confirmation modal
+- Sound effects for tap, move, start, line, win, lose, and draw events
 
----
+## Theme and Language
 
-## Internationalization
+- Theme modes: Auto, Light, Dark
+- Languages: Auto, English, Arabic, Japanese
+- RTL support for Arabic
+- Persistent settings for:
+  - Theme mode
+  - Language
+  - Sound enabled state
+  - Sound volume
 
-### Supported Languages
-- 🇬🇧 **English** (LTR)
-- 🇸🇦 **Arabic** (RTL with proper text direction)
+## Audio Controls
 
-### Adding New Languages
-1. Add translations to `context.tsx`:
-```typescript
-   const translations = {
-     en: { ... },
-     ar: { ... },
-     newLang: { ... } // Add here
-   }
-```
+- Sound on/off toggle
+- Volume slider (0-100)
+- Volume preview tap
+- Dynamic gain curve and compressor for consistent output
 
-2. Update language selector in `Settings.tsx`
+## Responsive Experience
 
----
+- Designed for desktop and mobile layouts
+- Intro/loading flow with mobile start screen and optional fullscreen action
+- Animated transitions across menu, mode selection, settings, gameplay, and results
 
-## 🚧 Roadmap
+## Credit
 
-- [ ] **Swap Mode** - Players swap pieces mid-game
-- [ ] **Reverse Mode** - Avoid making three in a row
-- [ ] **Online Multiplayer** - Play with friends remotely
-- [ ] **Game History** - Review past games
-- [ ] **Achievements System** - Unlock badges
-- [ ] **Custom Themes** - Create your own color schemes
-- [ ] **Sound Effects** - Audio feedback
-- [ ] **Replay System** - Watch game replays
-
----
-
-## Development
-
-### Available Scripts
-```bash
-npm start          # Start development server
-npm run build      # Build for production
-npm test           # Run tests
-npm run eject      # Eject from CRA (irreversible)
-```
-
-### Code Quality
-- **TypeScript** for type safety
-- **ESLint** for code linting
-- **Prettier** for code formatting (recommended)
-
-### Performance Optimizations
-- **Memoization** - React.memo on components
-- **Lazy Loading** - Code splitting with React.lazy
-- **Optimized Animations** - GPU-accelerated with Framer Motion
-- **AI Time Limits** - Prevents UI freezing on large boards
-
----
-
-## License
-
-MIT License - Feel free to use this project for learning or personal use.
-
----
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-**Built with React & TypeScript**
+Created by Hamza.

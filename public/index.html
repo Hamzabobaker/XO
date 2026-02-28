@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -18,6 +18,13 @@
     <title>XO</title>
     
     <style>
+      :root {
+        --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        --brand-gradient: linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%);
+        --muted-text: #94A3B8;
+        --muted-text-light: #64748B;
+      }
+
       /* Reset & Box-Sizing */
       * {
         margin: 0;
@@ -25,7 +32,7 @@
         box-sizing: border-box;
       }
 
-      /* ✅ Removed overflow hidden */
+      /* Keep page scroll enabled; overlay handles splash scroll lock. */
       html, body {
         margin: 0;
         padding: 0;
@@ -45,20 +52,25 @@
         opacity: 1;
       }
 
-      /* Loading Overlay - uses game background */
-      #loading-overlay {
+      /* Fullscreen overlay layers */
+      #loading-overlay,
+      #mobile-screen {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
         background: transparent;
+        z-index: 10000;
+        overflow: hidden;
+      }
+
+      /* Loading Overlay - uses game background */
+      #loading-overlay {
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 10000;
         transition: opacity 0.5s ease-out;
-        overflow: hidden; /* Only overlay prevents scroll */
       }
 
       #loading-overlay.fade-out {
@@ -66,11 +78,15 @@
         pointer-events: none;
       }
 
-      .loading-content {
+      .loading-content,
+      .mobile-content {
         text-align: center;
+        animation: fadeInUp 0.6s ease-out;
+      }
+
+      .loading-content {
         position: relative;
         z-index: 1;
-        animation: fadeInUp 0.6s ease-out;
       }
 
       @keyframes fadeInUp {
@@ -78,16 +94,20 @@
         to { opacity: 1; transform: translateY(0); }
       }
 
-      .loading-title {
-        font-size: 96px;
+      .loading-title,
+      .mobile-title {
+        font-family: var(--font-ui);
         font-weight: 900;
-        background: linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%);
+        background: var(--brand-gradient);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        margin-bottom: 40px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
         letter-spacing: -2px;
+      }
+
+      .loading-title {
+        font-size: 96px;
+        margin-bottom: 40px;
       }
 
       .loading-spinner {
@@ -118,57 +138,40 @@
       .loading-text {
         font-size: 16px;
         font-weight: 600;
-        color: #94A3B8;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        color: var(--muted-text);
+        font-family: 'Roboto', 'Arial Black', 'Helvetica Neue', Arial, sans-serif;
       }
 
       /* Mobile Interaction Screen */
       #mobile-screen {
         display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: transparent;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        z-index: 10000;
         transition: opacity 0.4s ease-out;
         padding: 20px;
-        overflow: hidden; /* Only mobile screen prevents scroll */
       }
 
       #mobile-screen.visible { display: flex; }
       #mobile-screen.fade-out { opacity: 0; pointer-events: none; }
 
       .mobile-content {
-        text-align: center;
         width: 100%;
         max-width: 400px;
-        animation: fadeInUp 0.6s ease-out;
       }
 
       .mobile-title {
         font-size: 80px;
-        font-weight: 900;
-        background: linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
         margin-bottom: 48px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-        letter-spacing: -2px;
       }
 
       .mobile-tip {
         font-size: 14px;
         font-weight: 500;
-        color: #94A3B8;
+        color: var(--muted-text);
         margin-bottom: 32px;
         line-height: 1.6;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        font-family: var(--font-ui);
       }
 
       .mobile-buttons {
@@ -183,7 +186,7 @@
         border-radius: 16px;
         font-size: 18px;
         font-weight: 700;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        font-family: var(--font-ui);
         border: none;
         cursor: pointer;
         transition: all 0.3s;
@@ -200,11 +203,9 @@
         box-shadow: 0 8px 24px rgba(96, 165, 250, 0.4);
       }
 
-      .btn-primary:active { transform: scale(0.97); }
-
       .btn-secondary {
         background: rgba(148, 163, 184, 0.15);
-        color: #94A3B8;
+        color: var(--muted-text);
         border: 2px solid rgba(148, 163, 184, 0.3);
       }
 
@@ -215,6 +216,7 @@
         box-shadow: 0 0 20px rgba(96, 165, 250, 0.3);
       }
 
+      .btn-primary:active,
       .btn-secondary:active { transform: scale(0.97); }
 
       .fullscreen-icon {
@@ -227,8 +229,8 @@
 
       /* Light mode (if detected) */
       @media (prefers-color-scheme: light) {
-        .loading-text, .mobile-tip { color: #64748B; }
-        .btn-secondary { color: #64748B; }
+        .loading-text, .mobile-tip { color: var(--muted-text-light); }
+        .btn-secondary { color: var(--muted-text-light); }
       }
 
       /* RTL Support */
@@ -276,92 +278,137 @@
     <div id="root"></div>
 
     <script>
-      const isArabic = navigator.language.startsWith('ar');
+      const lang = ((navigator.languages && navigator.languages[0]) || navigator.language || 'en').toLowerCase();
+      const isArabic = lang.startsWith('ar');
+      const isJapanese = lang.startsWith('ja');
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const docEl = document.documentElement;
+      const OVERLAY_FADE_MS = 500;
+      const START_FADE_MS = 400;
+      const REVEAL_DELAY_MS = 2000;
+      const FALLBACK_DELAY_MS = 3000;
+
+      const loadingOverlay = document.getElementById('loading-overlay');
+      const loadingText = document.getElementById('loading-text');
+      const mobileScreen = document.getElementById('mobile-screen');
+      const mobileTip = document.getElementById('mobile-tip');
+      const fullscreenBtn = document.getElementById('fullscreen-btn');
+      const fullscreenText = document.getElementById('fullscreen-text');
+      const startBtn = document.getElementById('start-btn');
+      const startText = document.getElementById('start-text');
+      const root = document.getElementById('root');
 
       const translations = {
-        en: { loading: 'Loading game...', tip: 'Fullscreen is recommended for the best experience', fullscreen: 'Fullscreen', start: 'Tap to Start' },
-        ar: { loading: 'جاري تحميل اللعبة...', tip: 'يُنصح باستخدام وضع ملء الشاشة للحصول على أفضل تجربة', fullscreen: 'ملء الشاشة', start: 'اضغط للبدء' }
+        en: {
+          loading: 'Loading game...',
+          tip: 'Fullscreen is recommended for the best experience',
+          fullscreen: 'Fullscreen',
+          start: 'Tap to Start'
+        },
+        ar: {
+          loading: 'جاري تحميل اللعبة...',
+          tip: 'يوصى بوضع ملء الشاشة للحصول على أفضل تجربة',
+          fullscreen: 'ملء الشاشة',
+          start: 'اضغط للبدء'
+        },
+        ja: {
+          loading: 'ゲームを読み込み中…',
+          tip: 'より快適に遊ぶには、フルスクリーンがおすすめです',
+          fullscreen: 'フルスクリーン',
+          start: 'タップして開始'
+        }
+      };  
+
+      const t = translations[isArabic ? 'ar' : isJapanese ? 'ja' : 'en'];
+      const setText = (el, value) => {
+        if (el) el.textContent = value;
+      };
+      const setFullscreenActive = (active) => {
+        isFullscreen = active;
+        fullscreenBtn?.classList.toggle('active', active);
+      };
+      const markGameStarted = () => {
+        gameStarted = true;
+      };
+      const showRoot = () => {
+        root?.classList.add('visible');
+      };
+      const exitOverlay = () => {
+        if (!loadingOverlay || loadingOverlay.style.display === 'none') return;
+        loadingOverlay.style.display = 'none';
+        if (isMobile && !gameStarted) {
+          mobileScreen?.classList.add('visible');
+          return;
+        }
+        if (!gameStarted) {
+          markGameStarted();
+          showRoot();
+        }
+      };
+      const hideMobileAndShowRoot = () => {
+        mobileScreen?.classList.add('fade-out');
+        window.setTimeout(() => {
+          if (mobileScreen) mobileScreen.style.display = 'none';
+          showRoot();
+        }, START_FADE_MS);
+      };
+      const requestFullscreen = () =>
+        (docEl.requestFullscreen?.() || docEl.webkitRequestFullscreen?.())?.then(() => {
+          setFullscreenActive(true);
+        }).catch(() => {});
+      const leaveFullscreen = () =>
+        (document.exitFullscreen?.() || document.webkitExitFullscreen?.())?.then(() => {
+          setFullscreenActive(false);
+        }).catch(() => {});
+      const syncFullscreenState = () => {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+          setFullscreenActive(false);
+        }
       };
 
-      const t = translations[isArabic ? 'ar' : 'en'];
-
-      if (isArabic) document.documentElement.setAttribute('dir', 'rtl');
-
-      document.getElementById('loading-text').textContent = t.loading;
-      document.getElementById('mobile-tip').textContent = t.tip;
-      document.getElementById('fullscreen-text').textContent = t.fullscreen;
-      document.getElementById('start-text').textContent = t.start;
+      if (isArabic) docEl.setAttribute('dir', 'rtl');
+      setText(loadingText, t.loading);
+      setText(mobileTip, t.tip);
+      setText(fullscreenText, t.fullscreen);
+      setText(startText, t.start);
 
       let isFullscreen = false;
       let gameStarted = false;
+      let revealStarted = false;
 
-      const fullscreenBtn = document.getElementById('fullscreen-btn');
-      fullscreenBtn?.addEventListener('click', e => {
+      const revealApp = () => {
+        if (revealStarted) return;
+        if (!loadingOverlay || loadingOverlay.style.display === 'none') return;
+        revealStarted = true;
+        loadingOverlay.classList.add('fade-out');
+        window.setTimeout(exitOverlay, OVERLAY_FADE_MS);
+      };
+
+      fullscreenBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
-        const elem = document.documentElement;
-        if (!isFullscreen) {
-          (elem.requestFullscreen?.() || elem.webkitRequestFullscreen?.())?.then(() => {
-            isFullscreen = true;
-            fullscreenBtn.classList.add('active');
-          }).catch(() => {});
-        } else {
-          (document.exitFullscreen?.() || document.webkitExitFullscreen?.())?.then(() => {
-            isFullscreen = false;
-            fullscreenBtn.classList.remove('active');
-          }).catch(() => {});
-        }
+        if (!isFullscreen) requestFullscreen();
+        else leaveFullscreen();
       });
 
-      document.addEventListener('fullscreenchange', () => {
-        if (!document.fullscreenElement) {
-          isFullscreen = false;
-          fullscreenBtn?.classList.remove('active');
-        }
-      });
+      document.addEventListener('fullscreenchange', syncFullscreenState);
+      document.addEventListener('webkitfullscreenchange', syncFullscreenState);
 
-      const startBtn = document.getElementById('start-btn');
       startBtn?.addEventListener('click', () => {
         if (gameStarted) return;
-        gameStarted = true;
-
-        const mobileScreen = document.getElementById('mobile-screen');
-        const root = document.getElementById('root');
-
-        mobileScreen?.classList.add('fade-out');
-        setTimeout(() => { mobileScreen.style.display = 'none'; root?.classList.add('visible'); }, 400);
+        markGameStarted();
+        hideMobileAndShowRoot();
       });
 
       window.addEventListener('load', () => {
-        setTimeout(() => {
-          const loadingOverlay = document.getElementById('loading-overlay');
-          loadingOverlay?.classList.add('fade-out');
+        window.setTimeout(revealApp, REVEAL_DELAY_MS);
+      }, { once: true });
 
-          setTimeout(() => {
-            loadingOverlay.style.display = 'none';
-            const mobileScreen = document.getElementById('mobile-screen');
-            const root = document.getElementById('root');
-
-            if (isMobile) { mobileScreen?.classList.add('visible'); }
-            else { gameStarted = true; root?.classList.add('visible'); }
-          }, 500);
-        }, 2000);
-      });
-
-      setTimeout(() => { // fallback
-        const loadingOverlay = document.getElementById('loading-overlay');
-        const mobileScreen = document.getElementById('mobile-screen');
-        const root = document.getElementById('root');
-
-        if (loadingOverlay && loadingOverlay.style.display !== 'none') {
-          loadingOverlay.classList.add('fade-out');
-          setTimeout(() => {
-            loadingOverlay.style.display = 'none';
-            if (isMobile && !gameStarted) mobileScreen?.classList.add('visible');
-            else if (!gameStarted) { gameStarted = true; root?.classList.add('visible'); }
-          }, 500);
-        }
-      }, 3000);
+      window.setTimeout(revealApp, FALLBACK_DELAY_MS); // fallback
     </script>
   </body>
 </html>
+
+
+
+
+

@@ -1,288 +1,413 @@
 // src/context.tsx
-import React, { createContext, ReactNode, useContext, useState, useEffect } from 'react';
+import React, {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { darkTheme, lightTheme, Theme } from './theme';
+import { playSound as playSoundRaw, SoundId } from './utils/sound';
 
-type Language = 'en' | 'ar' | 'auto';
+type Language = 'en' | 'ar' | 'ja' | 'auto';
 type ThemeMode = 'light' | 'dark' | 'auto';
-type GameMode = 'vsplayer' | 'vsbot';
-type Difficulty = 'easy' | 'normal' | 'hard' | 'impossible';
-type Variant = 'classic' | 'infinite' | 'blitz' | 'mega' | 'swap' | 'reverse';
 
 interface Translations {
   [key: string]: string;
 }
 
-// --- Translations ---
-const translations: Record<'en' | 'ar', Translations> = {
-  en: {
-    title: 'XO',
-    play: 'Play Game',
-    settings: 'Settings',
-    about: 'About',
-    quit: 'Quit',
-    exit: 'Exit',
-    vsplayer: 'VS Player',
-    vsbot: 'VS Bot',
-    classic: 'Classic',
-    infinite: 'Infinite',
-    blitz: 'Blitz',
-    mega: 'Mega Board',
-    swap: 'Swap',
-    reverse: 'Reverse',
-    classicDesc: 'Traditional 3×3 tic-tac-toe. Get three in a row to win.',
-    infiniteDesc: 'Only 3 marks allowed. placing a 4th removes your oldest.',
-    blitzDesc: 'Fast-paced with time limits. Make your move before time runs out!',
-    megaDesc: 'Larger boards with customizable win conditions.',
-    swapDesc: 'Players swap pieces or sides after few moves. Adapt your strategy!',
-    reverseDesc: 'Avoid making three in a row. Force your opponent to win.',
-    easy: 'Easy',
-    normal: 'Normal',
-    hard: 'Hard',
-    impossible: 'Impossible',
-    mode: 'Game Mode',
-    selectMode: 'Select Game Mode',
-    difficulty: 'Bot Difficulty',
-    variant: 'Game Variant',
-    gameVariant: 'Game Variant',
-    startGame: 'Start Game',
-    back: 'Back',
-    restart: 'Restart',
-    winner: 'Winner',
-    draw: 'Draw',
-    xWins: 'X Wins!',
-    oWins: 'O Wins!',
-    itsADraw: "It's a Draw!",
-    theme: 'Theme',
-    light: 'Light',
-    dark: 'Dark',
-    auto: 'Auto',
-    language: 'Language',
-    english: 'English',
-    arabic: 'Arabic',
-    xTurn: "X's Turn",
-    oTurn: "O's Turn",
-    gameDescription: 'A tic-tac-toe game with multiple modes',
-    builtWith: 'Built with React & TypeScript',
-    quitGameTitle: 'Quit Game?',
-    quitGameMessage: 'Are you sure you want to quit this game?',
-    quitAppTitle: 'Quit App?',
-    quitAppMessage: 'Are you sure you want to exit?',
-    cancel: 'Cancel',
-    confirm: 'Confirm',
-    gameModes: 'Game Modes',
-    playAlone: 'Challenge yourself against AI with multiple difficulty levels',
-    playTogether: 'Play with a friend on the same device',
-    features: 'Features',
-    multiLanguage: 'Supports English and Arabic languages',
-    darkMode: 'light and dark themes',
-    smartAI: 'AI opponents with varying difficulty',
-    createdBy: 'Created by Hamza',
-    creatorDesc: 'Just another developer, quietly making apps, wondering if anyone will notice… probably not, but hey, at least I tried',
-    modeDetails: 'Mode Details',
-    viewRules: 'View Rules',
-    comingSoon: 'Coming Soon',
-    underDevelopment: 'Under Development',
-    availableIn: 'Available in',
-    classicMode: 'Classic Mode',
-    infiniteMode: 'Infinite Mode',
-    passDevice: 'Pass device to other player after your turn',
-    yourTurn: 'Your Turn',
-    timerDuration: 'Timer Duration',
-    perMove: 'Per Move',
-    totalTime: 'Total Time',
-    seconds: 's',
-    timeUp: 'Time Up!',
-    playerTimeout: 'Player ran out of time',
-    timeWarning: 'Hurry up!',
-    blitzSettings: 'Blitz Settings',
-    timePerMove: 'Time Per Move',
-    totalMatchTime: 'Total Match Time',
-    onTimeout: 'On Timeout',
-    skipTurn: 'Skip Turn',
-    randomMove: 'Random Move',
-    loseOnTimeout: 'Lose on Timeout',
-    suddenDeath: 'Sudden Death',
-    apply: 'Apply',
-    boardSize: 'Board Size',
-    winCondition: 'Win Condition',
-    inARow: 'in a row',
-    toWin: 'to win',
-    megaSettings: 'Mega Board Settings',
-    size4x4: '4×4',
-    size5x5: '5×5',
-    size7x7: '7×7',
-    size8x8: '8×8',
-    size9x9: '9×9',
-    customWinLength: 'Win Length',
-    turns: 'turns',
-    botThinking: 'Bot is thinking...',
-    nextPowerUp: 'Next power-up in',
-    move: 'move',
-    moves: 'moves',
-    used: 'Used',
-    ready: 'Ready',
-    chooseGameMode: 'Choose Game Mode',
-    selectDifficulty: 'Select Difficulty',
-    whoStarts: 'Who Starts?',
-    playerStarts: 'I Start',
-    botStarts: 'Bot Starts',
-    whenTimeRunsOut: 'When Time Runs Out',
-    comingSoonMessage: 'This mode is still under development and will be available in a future update.',
-    winLength: 'Win Length',
-    playAs: 'Play As',
-    playAsDescription: 'Choose which symbol you want to play as',
-    startingPlayer: 'Starting Player',
-    startingPlayerDescription: 'Choose which player starts first',
-    player: 'Player',
-    blitzTimeoutInfo: 'If time runs out, you lose instantly',
-    youWin: 'You Win!',
-    youLose: 'You Lost!',
-    victory: 'Victory',
-    defeat: 'Defeat',
-    playAgain: 'Play Again',
-    mainMenu: 'Main Menu',
-  },
-  ar: {
-    title: 'XO',
-    play: 'العب اللعبة',
-    settings: 'الإعدادات',
-    about: 'حول',
-    quit: 'خروج',
-    exit: 'خروج',
-    vsplayer: 'ضد لاعب',
-    vsbot: 'ضد الروبوت',
-    classic: 'كلاسيك',
-    infinite: 'لا نهائي',
-    blitz: 'سريع',
-    mega: 'لوحة كبيرة',
-    swap: 'تبديل',
-    reverse: 'عكسي',
-    classicDesc: 'لعبة XO التقليدية 3×3. احصل على ثلاثة في صف للفوز.',
-    infiniteDesc: 'يمكنك وضع 3 علامات فقط. وضع علامة رابعة يزيل أقدم علامة.',
-    blitzDesc: 'سريع الوتيرة مع حدود زمنية. قم بحركتك قبل نفاد الوقت!',
-    megaDesc: 'لوحات أكبر مع شروط فوز قابلة للتخصيص.',
-    swapDesc: 'يتبادل اللاعبون القطع أو الجوانب بعد عدة حركات. تكيّف مع استراتيجيتك!',
-    reverseDesc: 'تجنَّب تكوين ثلاثة في صف. اجبر خصمك على الفوز.',
-    easy: 'سهل',
-    normal: 'عادي',
-    hard: 'صعب',
-    impossible: 'مستحيل',
-    mode: 'وضع اللعبة',
-    selectMode: 'اختر وضع اللعبة',
-    difficulty: 'صعوبة الروبوت',
-    variant: 'نوع اللعبة',
-    gameVariant: 'نوع اللعبة',
-    startGame: 'ابدأ اللعبة',
-    back: 'رجوع',
-    restart: 'إعادة',
-    winner: 'الفائز',
-    draw: 'تعادل',
-    xWins: 'فاز X!',
-    oWins: 'فاز O!',
-    itsADraw: 'تعادل!',
-    theme: 'المظهر',
-    light: 'فاتح',
-    dark: 'داكن',
-    auto: 'تلقائي',
-    language: 'اللغة',
-    english: 'الإنجليزية',
-    arabic: 'العربية',
-    xTurn: 'دور X',
-    oTurn: 'دور O',
-    gameDescription: 'لعبة XO مع أوضاع متعددة',
-    builtWith: 'مبني بـ React و TypeScript',
-    quitGameTitle: 'إنهاء اللعبة؟',
-    quitGameMessage: 'هل أنت متأكد من إنهاء هذه اللعبة؟',
-    quitAppTitle: 'إنهاء التطبيق؟',
-    quitAppMessage: 'هل أنت متأكد من الخروج؟',
-    nextPowerUp: 'القوة التالية في',
-    cancel: 'إلغاء',
-    confirm: 'تأكيد',
-    gameModes: 'أوضاع اللعب',
-    playAlone: 'تحدى نفسك ضد الذكاء الاصطناعي بمستويات صعوبة متعددة',
-    playTogether: 'العب مع صديق على نفس الجهاز',
-    features: 'المميزات',
-    multiLanguage: 'يدعم اللغتين الإنجليزية والعربية',
-    darkMode: 'مظاهر فاتحة وداكنة',
-    smartAI: 'خصوم ذكاء اصطناعي بمستويات صعوبة متنوعة',
-    createdBy: 'صنع بواسطة حمزة',
-    creatorDesc: 'أنا مجرد مطوّر آخر، أصنع تطبيقاتي بهدوء وأتساءل إن كان أحد سيلاحظ... ربما لا، لكن على الأقل حاولت',
-    modeDetails: 'تفاصيل الوضع',
-    viewRules: 'عرض القواعد',
-    whoStarts: 'من يبدأ؟',
-    playerStarts: 'أنا أبدأ',
-    botStarts: 'الروبوت يبدأ',
-    comingSoon: 'قريباً',
-    used: 'مستخدم',
-    ready: 'جاهز',
-    underDevelopment: 'تحت التطوير',
-    availableIn: 'متاح في',
-    classicMode: 'الوضع الكلاسيكي',
-    infiniteMode: 'الوضع اللانهائي',
-    passDevice: 'مرر الجهاز للاعب الآخر بعد دورك',
-    yourTurn: 'دورك',
-    botThinking: 'الروبوت يفكر...',
-    timerDuration: 'مدة المؤقت',
-    perMove: 'لكل حركة',
-    totalTime: 'الوقت الكلي',
-    seconds: 'ث',
-    timeUp: 'انتهى الوقت!',
-    playerTimeout: 'انتهى وقت اللاعب',
-    timeWarning: 'أسرع!',
-    blitzSettings: 'إعدادات السريع',
-    timePerMove: 'الوقت لكل حركة',
-    totalMatchTime: 'وقت المباراة الكلي',
-    onTimeout: 'عند انتهاء الوقت',
-    skipTurn: 'تخطي الدور',
-    randomMove: 'حركة عشوائية',
-    loseOnTimeout: 'خسارة عند انتهاء الوقت',
-    suddenDeath: 'موت مفاجئ',
-    apply: 'تطبيق',
-    boardSize: 'حجم اللوحة',
-    winCondition: 'شرط الفوز',
-    inARow: 'في صف',
-    toWin: 'للفوز',
-    megaSettings: 'إعدادات اللوحة الكبيرة',
-    size4x4: '4×4',
-    size5x5: '5×5',
-    size7x7: '7×7',
-    size8x8: '8×8',
-    size9x9: '9×9',
-    customWinLength: 'طول الفوز',
-    turns: 'دورة',
-    
-    move: 'حركة',
-    moves: 'حركات',
-    
-    chooseGameMode: 'اختر وضع اللعبة',
-    selectDifficulty: 'اختر الصعوبة',
-    whenTimeRunsOut: 'عند نفاد الوقت',
-    comingSoonMessage: 'هذا الوضع لا يزال قيد التطوير وسيكون متاحاً في تحديث مستقبلي.',
-    winLength: 'طول الفوز',
-    playAs: 'العب كـ',
-    playAsDescription: 'اختر الرمز الذي تريد اللعب به',
-    startingPlayer: 'اللاعب البادئ',
-    startingPlayerDescription: 'اختر أي لاعب يبدأ أولاً',
-    player: 'لاعب',
-    blitzTimeoutInfo: 'إذا نفذ الوقت، تخسر فوراً',
-    youWin: 'لقد فزت!',
-    youLose: 'لقد خسرت!',
-    victory: 'انتصار',
-    defeat: 'هزيمة',
-    playAgain: 'العب مرة أخرى',
-    mainMenu: 'القائمة الرئيسية',
-  },
+const en: Translations = {
+  title: 'XO',
+  play: 'Play Game',
+  settings: 'Settings',
+  about: 'About',
+  exit: 'Exit',
+  vsplayer: 'VS Player',
+  vsbot: 'VS Bot',
+  classic: 'Classic',
+  infinite: 'Infinite',
+  blitz: 'Blitz',
+  mega: 'Mega Board',
+  gravity: 'Drop Grid',
+  reverse: 'Reverse',
+  classicDesc: 'Traditional 3x3 tic-tac-toe. Get three in a row to win.',
+  infiniteDesc: 'Only 3 marks allowed. Placing a 4th removes your oldest.',
+  blitzDesc: 'Fast-paced with time limits. Make your move before time runs out!',
+  megaDesc: 'Larger boards with customizable win conditions.',
+  gravityDesc: 'Marks fall to the lowest empty cell in a column. Plan each drop.',
+  reverseDesc: 'Avoid making three in a row. Force your opponent to win.',
+  easy: 'Easy',
+  normal: 'Normal',
+  hard: 'Hard',
+  impossible: 'Impossible',
+  mode: 'Game Mode',
+  selectMode: 'Select Game Mode',
+  difficulty: 'Bot Difficulty',
+  gameVariant: 'Game Variant',
+  startGame: 'Start Game',
+  back: 'Back',
+  restart: 'Restart',
+  winner: 'Winner',
+  draw: 'Draw',
+  xWins: 'X Wins!',
+  oWins: 'O Wins!',
+  itsADraw: "It's a Draw!",
+  theme: 'Theme',
+  light: 'Light',
+  dark: 'Dark',
+  auto: 'Auto',
+  language: 'Language',
+  english: 'English',
+  arabic: 'Arabic',
+  japanese: 'Japanese',
+  xTurn: "X's Turn",
+  oTurn: "O's Turn",
+  gameDescription: 'An XO game with multiple modes',
+  sound: 'Sound Effects',
+  soundDesc: 'Toggle UI and game sounds',
+  on: 'On',
+  off: 'Off',
+  quitGameTitle: 'Quit Game?',
+  quitGameMessage: 'Are you sure you want to quit this game?',
+  cancel: 'Cancel',
+  confirm: 'Confirm',
+  playAlone: 'Challenge yourself against AI with multiple difficulty levels',
+  playTogether: 'Play with a friend on the same device',
+  multiLanguage: 'Supports English, Arabic, and Japanese',
+  darkMode: 'Light and dark themes',
+  createdBy: 'Created by Hamza',
+  creatorDesc: `This is Hamza.
+
+He was 21 when he built this app. a university student from Libya.
+
+He describes himself as ordinary, and he doesn’t feel the need to exaggerate that.
+
+Hamza likes games, not just playing them, but understanding them.
+How systems work. Why they feel balanced. Why they break.
+His attention naturally goes to those details.
+
+If something feels slightly off, he notices.
+Even if nobody asks, he ends up fixing it in his head.
+
+He likes cars for similar reasons,
+precision, response, and the way engineering turns intention into movement.
+
+Languages interest him the same way.
+Grammar, structure, patterns.
+Once you understand the foundation, the rest becomes manageable.
+
+He prefers clarity.
+Clear rules.
+Clean design.
+No unnecessary complexity.
+
+He once participated in a project for a tournament,
+where he learned the basics of building a web application.
+
+Because of that experience, he ended up building a simple XO game
+mostly out of habit, just to put what he learned into practice.
+
+It was a way to apply what he had learned and revisit the fundamentals,
+building something clean and well structured.`,
+  modeDetails: 'Mode Details',
+  comingSoon: 'Coming Soon',
+  seconds: 's',
+  timePerMove: 'Time Per Move',
+  boardSize: 'Board Size',
+  inARow: 'in a row',
+  toWin: 'to win',
+  customWinLength: 'Win Length',
+  botThinking: 'Bot is thinking...',
+  whoStarts: 'Who Starts?',
+  playerStarts: 'I Start',
+  botStarts: 'Bot Starts',
+  winLength: 'Win Length',
+  playAs: 'Play As',
+  startingPlayer: 'Starting Player',
+  player: 'Player',
+  blitzTimeoutInfo: 'If time runs out, you lose instantly',
+  youWin: 'You Win!',
+  youLose: 'You Lost!',
+  victory: 'Victory',
+  defeat: 'Defeat',
+  playAgain: 'Play Again',
+  aboutQualityTitle: 'Game Highlights',
+  aboutQuality1: 'Solo or local two-player matches.',
+  aboutQuality2: 'Difficulty levels from casual to unforgiving.',
+  aboutQuality3: '6 game modes.',
+  aboutQuality4: 'Supports English, Arabic, and Japanese.',
+  aboutQuality5: 'Light and dark themes.',
+  aboutCreatorButton: 'About Creator',
+  aboutCreatorTapHint: 'Tap for more.',
+  aboutCreatorClickHint: 'Click for more.',
 };
 
-export interface BlitzSettings {
-  timePerMove: number;
-  onTimeout: 'skip' | 'random' | 'lose';
-}
+const ar: Translations = {
+  title: 'XO',
+  play: 'ابدأ اللعبة',
+  settings: 'الإعدادات',
+  about: 'حول',
+  exit: 'خروج',
+  vsplayer: 'ضد لاعب',
+  vsbot: 'ضد الروبوت',
+  classic: 'كلاسيكي',
+  infinite: 'لا نهائي',
+  blitz: 'بليتز',
+  mega: 'لوحة كبيرة',
+  gravity: 'لوحة السقوط',
+  reverse: 'عكسي',
+  classicDesc: 'لعبة 3x3 التقليدية. ضع ثلاثة في صف للفوز.',
+  infiniteDesc: 'مسموح بثلاث علامات فقط. وضع الرابعة يزيل أقدم علامة.',
+  blitzDesc: 'وضع سريع بحدود زمنية. العب قبل انتهاء الوقت!',
+  megaDesc: 'لوحات أكبر مع شروط فوز قابلة للتخصيص.',
+  gravityDesc: 'العلامة تسقط إلى أدنى خانة فارغة في العمود. خطّط لكل إسقاط.',
+  reverseDesc: 'تجنب عمل ثلاثة في صف. اجعل خصمك يربح.',
+  easy: 'سهل',
+  normal: 'عادي',
+  hard: 'صعب',
+  impossible: 'مستحيل',
+  mode: 'وضع اللعب',
+  selectMode: 'اختر وضع اللعب',
+  difficulty: 'صعوبة الروبوت',
+  gameVariant: 'نوع اللعبة',
+  startGame: 'ابدأ اللعبة',
+  back: 'رجوع',
+  restart: 'إعادة',
+  winner: 'الفائز',
+  draw: 'تعادل',
+  xWins: 'X فاز!',
+  oWins: 'O فاز!',
+  itsADraw: 'لا غالب ولا مغلوب.',
+  theme: 'المظهر',
+  light: 'فاتح',
+  dark: 'داكن',
+  auto: 'تلقائي',
+  language: 'اللغة',
+  english: 'الإنجليزية',
+  arabic: 'العربية',
+  japanese: 'اليابانية',
+  xTurn: 'دور X',
+  oTurn: 'دور O',
+  gameDescription: 'لعبة إكس أو بأنماط متعددة',
+  sound: 'المؤثرات الصوتية',
+  soundDesc: 'تفعيل أصوات الواجهة واللعبة',
+  on: 'تشغيل',
+  off: 'إيقاف',
+  quitGameTitle: 'إنهاء اللعبة؟',
+  quitGameMessage: 'هل تريد إنهاء هذه اللعبة؟',
+  cancel: 'إلغاء',
+  confirm: 'تأكيد',
+  playAlone: 'تحدَّ نفسك ضد الذكاء الاصطناعي بمستويات متعددة',
+  playTogether: 'العب مع صديق على نفس الجهاز',
+  multiLanguage: 'يدعم الإنجليزية والعربية واليابانية',
+  darkMode: 'سمات فاتحة وداكنة',
+  createdBy: 'صنع بواسطة حمزة',
+  creatorDesc: `هذا حمزة.
 
-export interface MegaBoardSettings {
-  boardSize: 4 | 5 | 6 | 7 | 8 | 9;
-  winLength: number;
-}
+عمره واحد وعشرين سنة وقت ما دار هالتطبيق،
+وهو طالب جامعي من ليبيا.
+
+يقول عن نفسه إنه "شخص عادي"
+ولا يشعر أنه بحاجة إلى تغيير هذا الوصف.
+
+حمزة يحب الألعاب.
+ليس فقط لعبها، بل فهمها أيضًا.
+يهتم بالأنظمة والميكانيكيات،
+ولماذا ينجح شيء ولماذا يفشل.
+
+يلتقط تفاصيل التوازن،
+ويلاحظ عندما يكون هناك شيء غير مضبوط حتى لو كان بسيطًا،
+ويصلحه في ذهنه حتى عندما لا يطلب منه أحد ذلك.
+
+ويحب السيارات للسبب نفسه،
+الدقة، والاستجابة،
+وهندسة تحوّل الفكرة إلى حركة.
+
+ويدرس اللغات لأنها أنظمة أيضًا.
+النحو، والبنية، والأنماط.
+لما تفهم الأساس، يصير الباقي أسهل.
+
+يميل إلى الأشياء الواضحة والمنطقية.
+قواعد واضحة.
+تصميم نظيف.
+من دون تعقيد غير ضروري.
+
+أنا شاركت من قبل في مشروع ضمن بطولة معيّنة.
+التجربة علمتني الأساسيات في كيف ندير تطبيق ويب،
+وعطتني فكرة أوضح على الشغل خطوة بخطوة.
+
+وبسبب ذلك، درت لعبة "إكس أو" من باب العادة،
+عشان نطبّق اللي تعلّمته ونراجع الأساسيات،
+ونطلع حاجة مرتبة وواضحة.`,
+  modeDetails: 'تفاصيل الوضع',
+  comingSoon: 'قريباً',
+  seconds: 'ث',
+  timePerMove: 'الوقت لكل حركة',
+  boardSize: 'حجم اللوحة',
+  inARow: 'على التوالي',
+  toWin: 'للفوز',
+  customWinLength: 'طول الفوز',
+  botThinking: 'الروبوت يفكر...',
+  whoStarts: 'من يبدأ؟',
+  playerStarts: 'أنا أبدأ',
+  botStarts: 'الروبوت يبدأ',
+  winLength: 'طول الفوز',
+  playAs: 'اللعب كـ',
+  startingPlayer: 'لاعب البداية',
+  player: 'لاعب',
+  blitzTimeoutInfo: 'عند انتهاء الوقت تخسر فوراً',
+  youWin: 'أنت فزت!',
+  youLose: 'أنت خسرت!',
+  victory: 'انتصار',
+  defeat: 'هزيمة',
+  playAgain: 'العب مرة أخرى',
+  aboutQualityTitle: 'أبرز مميزات اللعبة',
+  aboutQuality1: 'مباريات فردية ضد الذكاء الاصطناعي أو لعب محلي لشخصين.',
+  aboutQuality2: 'مستويات صعوبة تبدأ من الهادئ وتنتهي بتحدٍ قاسٍ.',
+  aboutQuality3: 'ستة أوضاع لعب.',
+  aboutQuality4: 'واجهة كاملة بالعربية والإنجليزية واليابانية.',
+  aboutQuality5: 'يتوفر وضعي الفاتح والداكن.',
+  aboutCreatorButton: 'عن المطور',
+  aboutCreatorTapHint: 'اضغط للمزيد.',
+  aboutCreatorClickHint: 'انقر للمزيد.',
+};
+
+const ja: Translations = {
+  title: 'XO',
+  play: 'プレイ',
+  settings: '設定',
+  about: '概要',
+  exit: '退出',
+  vsplayer: '対人戦',
+  vsbot: '対ボット',
+  classic: 'クラシック',
+  infinite: 'インフィニット',
+  blitz: 'ブリッツ',
+  mega: 'メガボード',
+  gravity: 'ドロップグリッド',
+  reverse: 'リバース',
+  classicDesc: '3×3の定番ルール。3つ揃えれば勝ち。',
+  infiniteDesc: '置ける印は3つまで。4つ目で最古の印が消える。',
+  blitzDesc: '制限時間内に手を打つスピード勝負。',
+  megaDesc: '大きな盤面と勝利条件のカスタマイズ。',
+  gravityDesc: '印は列の最下段の空きマスに落ちる。落下を読んで戦略を立てよう。',
+  reverseDesc: '3つ揃えないように。相手に揃えさせる。',
+  easy: '簡単',
+  normal: '普通',
+  hard: '難しい',
+  impossible: '無理',
+  mode: 'ゲームモード',
+  selectMode: 'モード選択',
+  difficulty: 'ボット難易度',
+  gameVariant: 'ゲームタイプ',
+  startGame: 'ゲーム開始',
+  back: '戻る',
+  restart: 'リスタート',
+  winner: '勝者',
+  draw: '引き分け',
+  xWins: 'Xの勝ち！',
+  oWins: 'Oの勝ち！',
+  itsADraw: 'いい勝負でした！',
+  theme: 'テーマ',
+  light: 'ライト',
+  dark: 'ダーク',
+  auto: '自動',
+  language: '言語',
+  english: '英語',
+  arabic: 'アラビア語',
+  japanese: '日本語',
+  xTurn: 'Xの番',
+  oTurn: 'Oの番',
+  gameDescription: '複数のモードで遊べる三目並べゲーム',
+  sound: '効果音',
+  soundDesc: 'UIとゲーム音を切り替え',
+  on: 'オン',
+  off: 'オフ',
+  quitGameTitle: '終了しますか？',
+  quitGameMessage: 'このゲームを終了してもよろしいですか？',
+  cancel: 'キャンセル',
+  confirm: '終了',
+  playAlone: 'AIと複数難易度で対戦',
+  playTogether: '同じ端末で友だちと対戦',
+  multiLanguage: '英語・アラビア語・日本語に対応',
+  darkMode: 'ライト/ダークテーマ',
+  createdBy: '制作：ハムザ',
+  creatorDesc: `これはハムザの話。
+
+このアプリを作った時点で、彼は21歳、リビア出身の大学生だ。
+
+自分のことを「普通の人だ」と言う。
+わざわざ大きく見せようとは思っていない。
+
+ハムザはゲームが好きだ。
+ただ遊ぶだけではなく、仕組みを理解するのが好きだ。
+なぜうまく機能するのか。なぜうまくいかなくなるのか。
+そういう部分に自然と目がいく。
+
+少しでもバランスが崩れていれば気づくし、
+頼まれていなくても頭の中で直してしまう。
+
+車が好きなのも同じ理由だ。
+精度やレスポンス。
+意図がそのまま動きに変わる感覚。
+
+言語にも同じような面白さを感じている。
+文法や構造、パターン。
+土台が分かれば、あとは整理できる。
+
+はっきりしているものが好きだ。
+明確なルール。
+無駄のないデザイン。
+
+以前、ある大会でプロジェクトに参加したことがある。
+そこでWebアプリの基礎を学んだ。
+
+その経験があったから、
+自然な流れでシンプルなXO（エックスオー）のゲームを作った。
+特別な理由というより、習慣の延長のようなものだ。
+
+学んだことを整理して、
+もう一度基礎を確認するための一歩だった。`,
+  modeDetails: 'モード詳細',
+  comingSoon: '近日公開',
+  seconds: '秒',
+  timePerMove: '1手の時間',
+  boardSize: '盤面サイズ',
+  inARow: '連続',
+  toWin: 'で勝利',
+  customWinLength: '勝利ライン',
+  botThinking: 'ボットが考え中…',
+  whoStarts: '先手は？',
+  playerStarts: '自分が先手',
+  botStarts: 'ボットが先手',
+  winLength: '勝利ライン',
+  playAs: '自分の記号',
+  startingPlayer: '先手',
+  player: 'プレイヤー',
+  blitzTimeoutInfo: '時間切れで即負け',
+  youWin: '勝ち！',
+  youLose: '負け…',
+  victory: '勝利',
+  defeat: '敗北',
+  playAgain: 'もう一度',
+  aboutQualityTitle: 'ゲームの見どころ',
+  aboutQuality1: '1人対AIでも、同じ端末での2人対戦でも遊べます。',
+  aboutQuality2: '気軽に遊べる難易度から、容赦ない難易度まで対応。',
+  aboutQuality3: '6つのゲームモードを収録。',
+  aboutQuality4: '日本語・英語・アラビア語に対応。',
+  aboutQuality5: 'ライト/ダークテーマを搭載。',
+  aboutCreatorButton: '制作者について',
+  aboutCreatorTapHint: 'タップして続きを読む',
+  aboutCreatorClickHint: 'クリックして続きを読む',
+};
+
+const translations: Record<'en' | 'ar' | 'ja', Translations> = {
+  en,
+  ar,
+  ja,
+};
 
 interface AppContextType {
   theme: Theme;
@@ -293,104 +418,139 @@ interface AppContextType {
   setLanguage: (lang: Language) => void;
   t: (key: string) => string;
   dir: 'ltr' | 'rtl';
-  selectedMode: GameMode;
-  setSelectedMode: (mode: GameMode) => void;
-  selectedDifficulty: Difficulty;
-  setSelectedDifficulty: (diff: Difficulty) => void;
-  selectedVariant: Variant;
-  setSelectedVariant: (variant: Variant) => void;
-  blitzSettings: BlitzSettings;
-  setBlitzSettings: (settings: BlitzSettings) => void;
-  megaBoardSettings: MegaBoardSettings;
-  setMegaBoardSettings: (settings: MegaBoardSettings) => void;
+  sfxEnabled: boolean;
+  setSfxEnabled: (enabled: boolean) => void;
+  sfxVolume: number;
+  setSfxVolume: (value: number) => void;
+  playSound: (sound: SoundId) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  // Detect device theme & language
-  const prefersDark = typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+  const readStored = (key: string): string | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  };
+
+  const prefersDark =
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-color-scheme: dark)').matches;
   const deviceColorScheme: ThemeMode = prefersDark ? 'dark' : 'light';
-  const deviceLanguage: Language = (navigator.language || 'en').startsWith('ar') ? 'ar' : 'en';
 
-  // --- State ---
-  const [themeMode, setThemeMode] = useState<ThemeMode>('auto');
-  const [language, setLanguage] = useState<Language>('auto');
-  const [selectedMode, setSelectedModeState] = useState<GameMode>('vsplayer');
-  const [selectedDifficulty, setSelectedDifficultyState] = useState<Difficulty>('normal');
-  const [selectedVariant, setSelectedVariantState] = useState<Variant>('classic');
-  const [blitzSettings, setBlitzSettings] = useState<BlitzSettings>({ timePerMove: 10, onTimeout: 'random' });
-  const [megaBoardSettings, setMegaBoardSettings] = useState<MegaBoardSettings>({ boardSize: 5, winLength: 4 });
+  const detectLanguage = (): Language => {
+    if (typeof navigator === 'undefined') return 'en';
+    const lang = (navigator.language || 'en').toLowerCase();
+    if (lang.startsWith('ar')) return 'ar';
+    if (lang.startsWith('ja')) return 'ja';
+    return 'en';
+  };
 
-  // ✅ Sync language to localStorage for index.html
+  const deviceLanguage: Language = detectLanguage();
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    const stored = readStored('xo-theme-mode');
+    return stored === 'light' || stored === 'dark' || stored === 'auto' ? stored : 'auto';
+  });
+  const [language, setLanguage] = useState<Language>(() => {
+    const stored = readStored('xo-game-language');
+    return stored === 'en' || stored === 'ar' || stored === 'ja' || stored === 'auto' ? stored : 'auto';
+  });
+  const [sfxEnabled, setSfxEnabled] = useState<boolean>(() => {
+    const stored = readStored('xo-sfx-enabled');
+    if (stored === 'true') return true;
+    if (stored === 'false') return false;
+    return true;
+  });
+  const [sfxVolume, setSfxVolume] = useState<number>(() => {
+    const stored = readStored('xo-sfx-volume');
+    if (!stored) return 100;
+    const parsed = Number(stored);
+    if (!Number.isFinite(parsed)) return 100;
+    return Math.max(0, Math.min(100, Math.round(parsed)));
+  });
+
   useEffect(() => {
     try {
       localStorage.setItem('xo-game-language', language);
-    } catch (e) {
-      // Ignore localStorage errors
-    }
+    } catch {}
   }, [language]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('xo-theme-mode', themeMode);
+    } catch {}
+  }, [themeMode]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('xo-sfx-enabled', String(sfxEnabled));
+    } catch {}
+  }, [sfxEnabled]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('xo-sfx-volume', String(sfxVolume));
+    } catch {}
+  }, [sfxVolume]);
 
-  // --- Compute actual theme & language ---
   const actualThemeMode = themeMode === 'auto' ? deviceColorScheme : themeMode;
   const theme = actualThemeMode === 'light' ? lightTheme : darkTheme;
-  const actualLanguage = language === 'auto' ? deviceLanguage : language;
+  const actualLanguage = (language === 'auto' ? deviceLanguage : language) as keyof typeof translations;
   const dir: 'ltr' | 'rtl' = actualLanguage === 'ar' ? 'rtl' : 'ltr';
 
-  // --- Apply theme & direction ---
   useEffect(() => {
     const html = document.documentElement;
     html.classList.remove('light-mode', 'dark-mode');
     html.classList.add(actualThemeMode === 'dark' ? 'dark-mode' : 'light-mode');
-    html.setAttribute('dir', dir); // handles Arabic flipping automatically
+    html.setAttribute('dir', dir);
   }, [actualThemeMode, dir]);
 
-  // --- Translation function ---
-  const t = (key: string): string => {
+  const t = useCallback((key: string): string => {
     return translations[actualLanguage]?.[key] ?? translations.en?.[key] ?? key;
-  };
+  }, [actualLanguage]);
 
-  // --- Difficulty / Variant safety rules ---
-  const setSelectedDifficulty = (diff: Difficulty) => {
-    if (diff === 'impossible' && selectedVariant !== 'classic') {
-      setSelectedDifficultyState('hard');
-      return;
-    }
-    setSelectedDifficultyState(diff);
-  };
+  const sfxGain = useMemo(() => {
+    const maxVolume = 16;
+    const clamped = Math.max(0, Math.min(100, sfxVolume));
+    const normalized = clamped / 100;
+    const curve = Math.pow(normalized, 1.8);
+    return normalized <= 0 ? 0 : curve * maxVolume;
+  }, [sfxVolume]);
 
-  const setSelectedVariant = (variant: Variant) => {
-    if (variant !== 'classic' && selectedDifficulty === 'impossible') {
-      setSelectedDifficultyState('hard');
-    }
-    setSelectedVariantState(variant);
-  };
+  const playSound = useCallback((sound: SoundId) => {
+    if (!sfxEnabled) return;
+    playSoundRaw(sound, sfxGain);
+  }, [sfxEnabled, sfxGain]);
 
-  const setSelectedMode = (mode: GameMode) => setSelectedModeState(mode);
+  const contextValue = useMemo<AppContextType>(() => ({
+    theme,
+    actualThemeMode,
+    themeMode,
+    setThemeMode,
+    language,
+    setLanguage,
+    t,
+    dir,
+    sfxEnabled,
+    setSfxEnabled,
+    sfxVolume,
+    setSfxVolume,
+    playSound,
+  }), [
+    theme,
+    actualThemeMode,
+    themeMode,
+    language,
+    t,
+    dir,
+    sfxEnabled,
+    sfxVolume,
+    playSound,
+  ]);
 
   return (
-    <AppContext.Provider
-      value={{
-        theme,
-        actualThemeMode,
-        themeMode,
-        setThemeMode,
-        language,
-        setLanguage,
-        t,
-        dir,
-        selectedMode,
-        setSelectedMode,
-        selectedDifficulty,
-        setSelectedDifficulty,
-        selectedVariant,
-        setSelectedVariant,
-        blitzSettings,
-        setBlitzSettings,
-        megaBoardSettings,
-        setMegaBoardSettings,
-      }}
-    >
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );

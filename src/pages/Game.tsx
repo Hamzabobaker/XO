@@ -1,5 +1,5 @@
 // src/pages/Game.tsx
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { IoRefresh, IoExit } from 'react-icons/io5';
@@ -18,6 +18,44 @@ interface MoveRecord {
   time: number;
 }
 
+const buildWinningCombos = (size: number, length: number): number[][] => {
+  const combos: number[][] = [];
+
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col <= size - length; col++) {
+      const combo: number[] = [];
+      for (let i = 0; i < length; i++) combo.push(row * size + col + i);
+      combos.push(combo);
+    }
+  }
+
+  for (let col = 0; col < size; col++) {
+    for (let row = 0; row <= size - length; row++) {
+      const combo: number[] = [];
+      for (let i = 0; i < length; i++) combo.push((row + i) * size + col);
+      combos.push(combo);
+    }
+  }
+
+  for (let row = 0; row <= size - length; row++) {
+    for (let col = 0; col <= size - length; col++) {
+      const combo: number[] = [];
+      for (let i = 0; i < length; i++) combo.push((row + i) * size + (col + i));
+      combos.push(combo);
+    }
+  }
+
+  for (let row = 0; row <= size - length; row++) {
+    for (let col = length - 1; col < size; col++) {
+      const combo: number[] = [];
+      for (let i = 0; i < length; i++) combo.push((row + i) * size + (col - i));
+      combos.push(combo);
+    }
+  }
+
+  return combos;
+};
+
 function useQuery() {
   return new URLSearchParams(useLocation().search);
 }
@@ -25,7 +63,21 @@ function useQuery() {
 export default function Game() {
   const navigate = useNavigate();
   const query = useQuery();
-  const { theme, t } = useApp();
+  const { theme, t, playSound } = useApp();
+  const parseIntQuery = useCallback((
+    key: string,
+    fallback: number,
+    min?: number,
+    max?: number
+  ): number => {
+    const raw = query.get(key);
+    const parsed = raw ? Number.parseInt(raw, 10) : fallback;
+    if (!Number.isFinite(parsed)) return fallback;
+    let value = parsed;
+    if (typeof min === 'number') value = Math.max(min, value);
+    if (typeof max === 'number') value = Math.min(max, value);
+    return value;
+  }, [query]);
 
   const mode = (query.get('mode') || 'vsplayer') as 'vsplayer' | 'vsbot';
   const difficulty = (query.get('difficulty') || 'normal') as
@@ -33,17 +85,20 @@ export default function Game() {
     | 'normal'
     | 'hard'
     | 'impossible';
-  const variant = (query.get('variant') || 'classic') as string;
+  const rawVariant = (query.get('variant') || 'classic') as string;
+  const variant = rawVariant === 'swap' ? 'gravity' : rawVariant;
   const playerSymbol = (query.get('playerSymbol') || 'X') as 'X' | 'O';
   const botStarts = query.get('botStarts') === 'true';
+  const shouldWaitForBotOpeningMove = mode === 'vsbot' && botStarts;
 
-  const timePerMove = query.get('timePerMove') ? parseInt(query.get('timePerMove')!, 10) : 10;
-  const boardSizeParam = query.get('boardSize') ? parseInt(query.get('boardSize')!, 10) : 5;
-  const winLengthParam = query.get('winLength') ? parseInt(query.get('winLength')!, 10) : 4;
-
+  const timePerMove = parseIntQuery('timePerMove', 10, 1, 300);
+  const boardSizeParam = parseIntQuery('boardSize', 5, 4, 9);
+  const winLengthParam = parseIntQuery('winLength', 4, 3, 9);
   const isMegaBoard = variant === 'mega';
   const isBlitzMode = variant === 'blitz';
   const isInfiniteMode = variant === 'infinite';
+  const isGravityMode = variant === 'gravity';
+  const isReverseMode = variant === 'reverse';
   const boardSize = isMegaBoard ? (boardSizeParam as 4 | 5 | 6 | 7 | 8 | 9) : 3;
   // Sanitize winLength according to new rules: no 4 for 7×7+, add 8 option from 8×8+
   let computedWin = isMegaBoard ? winLengthParam : 3;
@@ -85,26 +140,34 @@ export default function Game() {
   const boardDisplaySize = getBoardDisplaySize();
 
   const [board, setBoard] = useState<Cell[]>(Array(totalCells).fill(null));
+  const [humanSymbol, setHumanSymbol] = useState<'X' | 'O'>(playerSymbol);
+  const [awaitingBotOpeningMove, setAwaitingBotOpeningMove] = useState<boolean>(
+    shouldWaitForBotOpeningMove
+  );
 
-  const getInitialTurn = () => {
+  const getInitialTurn = (symbol: 'X' | 'O') => {
     if (mode === 'vsbot' && botStarts) {
-      return playerSymbol === 'O';
+      return symbol === 'O';
     }
-    return playerSymbol === 'X';
+    return symbol === 'X';
   };
 
-  const [xTurn, setXTurn] = useState<boolean>(getInitialTurn());
+  const [xTurn, setXTurn] = useState<boolean>(getInitialTurn(playerSymbol));
   const [winner, setWinner] = useState<Cell | 'draw' | null>(null);
   const [winningCombo, setWinningCombo] = useState<number[] | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [quitModalVisible, setQuitModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalMessage, setModalMessage] = useState('');
+  const lastResultRef = useRef<Cell | 'draw' | null>(null);
+  const lastWinLineRef = useRef<string | null>(null);
+  const navLockRef = useRef(0);
 
   // xTimeLeft / oTimeLeft are exposed as numbers with two decimals (e.g. 12.34)
   const [xTimeLeft, setXTimeLeft] = useState<number>(timePerMove);
   const [oTimeLeft, setOTimeLeft] = useState<number>(timePerMove);
   const timerRef = useRef<number | null>(null);
+  const lastTickAtRef = useRef<number | null>(null);
 
   // higher-precision internal refs to avoid float accumulation errors
   const xTimeDecimal = useRef<number>(timePerMove);
@@ -114,55 +177,39 @@ export default function Game() {
 
   const moveHistory = useRef<MoveRecord[]>([]);
   const [botThinking, setBotThinking] = useState(false);
+  const [postRestartLock, setPostRestartLock] = useState(false);
+  const postRestartLockRef = useRef(false);
   const megaCacheRef = useRef<Map<string, number> | null>(new Map());
   const botRunRef = useRef(0);
   const botTimersRef = useRef<number[]>([]);
+  const postRestartTimerRef = useRef<number | null>(null);
 
   // small ref to read botThinking inside effects without including it in deps
   const botThinkingRef = useRef(botThinking);
   useEffect(() => { botThinkingRef.current = botThinking; }, [botThinking]);
 
-  const generateWinningCombos = React.useCallback((size: number, length: number): number[][] => {
-    const combos: number[][] = [];
-
-    for (let row = 0; row < size; row++) {
-      for (let col = 0; col <= size - length; col++) {
-        const combo: number[] = [];
-        for (let i = 0; i < length; i++) combo.push(row * size + col + i);
-        combos.push(combo);
+  useEffect(() => {
+    return () => {
+      if (postRestartTimerRef.current) {
+        window.clearTimeout(postRestartTimerRef.current);
+        postRestartTimerRef.current = null;
       }
-    }
-
-    for (let col = 0; col < size; col++) {
-      for (let row = 0; row <= size - length; row++) {
-        const combo: number[] = [];
-        for (let i = 0; i < length; i++) combo.push((row + i) * size + col);
-        combos.push(combo);
-      }
-    }
-
-    for (let row = 0; row <= size - length; row++) {
-      for (let col = 0; col <= size - length; col++) {
-        const combo: number[] = [];
-        for (let i = 0; i < length; i++) combo.push((row + i) * size + (col + i));
-        combos.push(combo);
-      }
-    }
-
-    for (let row = 0; row <= size - length; row++) {
-      for (let col = length - 1; col < size; col++) {
-        const combo: number[] = [];
-        for (let i = 0; i < length; i++) combo.push((row + i) * size + (col - i));
-        combos.push(combo);
-      }
-    }
-
-    return combos;
+    };
   }, []);
 
-  const checkWinnerWithCombo = React.useCallback((b: Cell[]): { result: Cell | 'draw' | null; combo: number[] | null } => {
-    const winningCombos = generateWinningCombos(boardSize, winLength);
+  const clearBotTimers = useCallback(() => {
+    for (const id of botTimersRef.current) {
+      try { window.clearTimeout(id); } catch (e) {}
+      try { window.cancelAnimationFrame(id); } catch (e) {}
+    }
+    botTimersRef.current = [];
+  }, []);
 
+  const winningCombos = useMemo(
+    () => buildWinningCombos(boardSize, winLength),
+    [boardSize, winLength]
+  );
+  const checkWinnerWithCombo = React.useCallback((b: Cell[]): { result: Cell | 'draw' | null; combo: number[] | null } => {
     for (const combo of winningCombos) {
       const firstCell = b[combo[0]];
       if (firstCell && combo.every((idx) => b[idx] === firstCell)) {
@@ -175,7 +222,8 @@ export default function Game() {
     }
 
     return { result: null, combo: null };
-  }, [boardSize, winLength, generateWinningCombos]);
+  }, [winningCombos]);
+
 
   const handleTimeout = useCallback((player: 'X' | 'O') => {
     if (!winner && isBlitzMode) {
@@ -186,6 +234,27 @@ export default function Game() {
       setModalVisible(true);
     }
   }, [winner, isBlitzMode, t]);
+  useEffect(() => {
+    if (!modalVisible || !winner || lastResultRef.current === winner) return;
+    lastResultRef.current = winner;
+    if (winner === 'draw') {
+      playSound('draw');
+      return;
+    }
+    if (mode === 'vsbot') {
+      const playerWon = winner === humanSymbol;
+      playSound(playerWon ? 'win' : 'lose');
+      return;
+    }
+    playSound('win');
+  }, [modalVisible, winner, mode, humanSymbol, playSound]);
+  useEffect(() => {
+    if (!winningCombo || winner === 'draw') return;
+    const key = winningCombo.join(',');
+    if (lastWinLineRef.current === key) return;
+    lastWinLineRef.current = key;
+    playSound('line');
+  }, [winningCombo, winner, playSound]);
 
   // Blitz timer — centisecond-accurate (updates exposed time with two decimals)
   // Intentionally omit `botThinking` from dependencies so the effect
@@ -202,12 +271,16 @@ export default function Game() {
 
     // decimals are tracked in refs; no need to seed from state here
 
-    // run at 10ms to allow hundredths to be represented (00.00)
+    // Run at a lower frequency and use elapsed time to reduce render pressure.
+    lastTickAtRef.current = Date.now();
     timerRef.current = window.setInterval(() => {
+      const now = Date.now();
+      const lastTick = lastTickAtRef.current ?? now;
+      const deltaSec = Math.max(0, (now - lastTick) / 1000);
+      lastTickAtRef.current = now;
+
       if (xTurn) {
-        // decrement by 0.01 seconds
-        xTimeDecimal.current = Math.max(0, +(xTimeDecimal.current - 0.01).toFixed(4));
-        // expose two decimals for UI (keeps trailing zero)
+        xTimeDecimal.current = Math.max(0, +(xTimeDecimal.current - deltaSec).toFixed(4));
         setXTimeLeft(+xTimeDecimal.current.toFixed(2));
 
         if (xTimeDecimal.current <= 0) {
@@ -225,7 +298,7 @@ export default function Game() {
           handleTimeout('O');
         }
       }
-    }, 10);
+    }, 50);
 
     return () => {
       if (timerRef.current) {
@@ -239,7 +312,7 @@ export default function Game() {
     const newBoard = [...board];
 
     if (!gameStarted) {
-      const isHumanMove = mode === 'vsplayer' || (mode === 'vsbot' && symbol === playerSymbol);
+      const isHumanMove = mode === 'vsplayer' || (mode === 'vsbot' && symbol === humanSymbol);
       if (isHumanMove) {
         setGameStarted(true);
       }
@@ -257,10 +330,25 @@ export default function Game() {
     newBoard[index] = symbol;
     moveHistory.current.push({ player: symbol, index, time: Date.now() });
     setBoard(newBoard);
+    const botSymbol = humanSymbol === 'X' ? 'O' : 'X';
+    const isHumanMove = symbol === humanSymbol;
+    const isBotOpeningMove =
+      shouldWaitForBotOpeningMove && awaitingBotOpeningMove && symbol === botSymbol;
+    const suppressOpeningHumanMoveSound =
+      shouldWaitForBotOpeningMove && awaitingBotOpeningMove && isHumanMove;
+    if (!suppressOpeningHumanMoveSound) {
+      playSound('move');
+    }
+    if (isBotOpeningMove) {
+      setAwaitingBotOpeningMove(false);
+    }
 
     const { result, combo } = checkWinnerWithCombo(newBoard);
-    if (result) {
-      setWinner(result);
+    const effectiveResult =
+      result && result !== 'draw' && isReverseMode ? (result === 'X' ? 'O' : 'X') : result;
+
+    if (effectiveResult) {
+      setWinner(effectiveResult);
       setWinningCombo(combo);
       if (timerRef.current) {
         window.clearInterval(timerRef.current);
@@ -273,12 +361,12 @@ export default function Game() {
           setModalMessage(t('itsADraw'));
         } else {
           if (mode === 'vsbot') {
-            const playerWon = result === playerSymbol;
+            const playerWon = effectiveResult === humanSymbol;
             setModalTitle(playerWon ? t('victory') : t('defeat'));
             setModalMessage(playerWon ? t('youWin') : t('youLose'));
           } else {
             setModalTitle(t('winner'));
-            setModalMessage(result === 'X' ? t('xWins') : t('oWins'));
+            setModalMessage(effectiveResult === 'X' ? t('xWins') : t('oWins'));
           }
         }
         setModalVisible(true);
@@ -287,25 +375,72 @@ export default function Game() {
       // switch turn — don't sync decimals here (avoids time-gain exploit)
       setXTurn((prev) => !prev);
     }
-  }, [board, gameStarted, mode, playerSymbol, isInfiniteMode, t, checkWinnerWithCombo]);
+  }, [
+    board,
+    gameStarted,
+    mode,
+    humanSymbol,
+    isInfiniteMode,
+    isReverseMode,
+    shouldWaitForBotOpeningMove,
+    awaitingBotOpeningMove,
+    t,
+    checkWinnerWithCombo,
+    playSound,
+  ]);
 
-  const onCellPress = (i: number) => {
-    if (board[i] || winner) return;
+  const onCellPress = useCallback((i: number) => {
+    if (winner) return;
+    if (Date.now() < navLockRef.current) return;
+    if (postRestartLockRef.current) return;
+    if (postRestartLock) return;
+    if (awaitingBotOpeningMove) return;
+    if (botThinking) return;
 
     if (mode === 'vsbot') {
-      const isHumanTurn = (playerSymbol === 'X' && xTurn) || (playerSymbol === 'O' && !xTurn);
+      const isHumanTurn = (humanSymbol === 'X' && xTurn) || (humanSymbol === 'O' && !xTurn);
       if (!isHumanTurn) return;
     }
 
-    applyMove(i, xTurn ? 'X' : 'O');
-  };
+    let targetIndex = i;
+    if (isGravityMode) {
+      const col = i % boardSize;
+      let dropIndex = -1;
+      for (let row = boardSize - 1; row >= 0; row--) {
+        const idx = row * boardSize + col;
+        if (board[idx] === null) {
+          dropIndex = idx;
+          break;
+        }
+      }
+      if (dropIndex === -1) return;
+      targetIndex = dropIndex;
+    } else if (board[i]) {
+      return;
+    }
+
+    if (board[targetIndex]) return;
+    applyMove(targetIndex, xTurn ? 'X' : 'O');
+  }, [
+    winner,
+    postRestartLock,
+    awaitingBotOpeningMove,
+    botThinking,
+    mode,
+    humanSymbol,
+    xTurn,
+    isGravityMode,
+    boardSize,
+    board,
+    applyMove,
+  ]);
 
   // ----------------- BOT SCHEDULING EFFECT (fixed) -----------------
   useEffect(() => {
     // use botThinkingRef.current so we don't need to include botThinking in deps
     if (mode !== 'vsbot' || winner || botThinkingRef.current) return;
 
-    const isBotTurn = (playerSymbol === 'X' && !xTurn) || (playerSymbol === 'O' && xTurn);
+    const isBotTurn = (humanSymbol === 'X' && !xTurn) || (humanSymbol === 'O' && xTurn);
     if (!isBotTurn) return;
 
     let minThinkingTime = 300;
@@ -318,7 +453,7 @@ export default function Game() {
     }
 
     if (isBlitzMode) {
-      const botSymbol = playerSymbol === 'X' ? 'O' : 'X';
+      const botSymbol = humanSymbol === 'X' ? 'O' : 'X';
       const botTimeLeft = botSymbol === 'X' ? xTimeDecimal.current : oTimeDecimal.current;
 
       if (botTimeLeft <= 3) {
@@ -344,7 +479,7 @@ export default function Game() {
 
         const innerId = window.setTimeout(() => {
           if (runId !== botRunRef.current) return;
-          const botSymbol = playerSymbol === 'X' ? 'O' : 'X';
+          const botSymbol = humanSymbol === 'X' ? 'O' : 'X';
           let aiTimeBudget: number | undefined = undefined;
           if (difficulty === 'impossible') {
             aiTimeBudget = isMegaBoard ? 6000 : 3500;
@@ -352,11 +487,12 @@ export default function Game() {
             aiTimeBudget = isMegaBoard ? 3000 : 1800;
           }
 
+          const aiVariant = variant;
           const botIdx = getBotMove(
             board,
             botSymbol as 'X' | 'O',
             difficulty,
-            variant as any,
+            aiVariant as any,
             moveHistory.current,
             isBlitzMode,
             boardSize,
@@ -365,14 +501,30 @@ export default function Game() {
             megaCacheRef.current ?? undefined
           );
 
+          const isImmediateReverseSelfLoss = (move: number) => {
+            if (!isReverseMode || move === -1) return false;
+            const testBoard = [...board];
+            testBoard[move] = botSymbol as 'X' | 'O';
+            return checkWinnerWithCombo(testBoard).result === botSymbol;
+          };
+
+          let resolvedBotIdx = botIdx;
+          // Keep AI choice in reverse mode; only override if it is an immediate self-loss.
+          if (isImmediateReverseSelfLoss(botIdx)) {
+            const safeMoves = board
+              .map((cell, idx) => (cell === null ? idx : -1))
+              .filter((idx) => idx !== -1)
+              .filter((move) => !isImmediateReverseSelfLoss(move));
+            resolvedBotIdx = safeMoves.length > 0 ? safeMoves[0] : botIdx;
+          }
           const thinkTime = Date.now() - thinkStartTime;
           const remainingTime = Math.max(0, minThinkingTime - thinkTime);
 
           const afterId = window.setTimeout(() => {
             if (runId !== botRunRef.current) return;
             setBotThinking(false);
-            if (botIdx !== -1) {
-              applyMove(botIdx, botSymbol as 'X' | 'O');
+            if (resolvedBotIdx !== -1) {
+              applyMove(resolvedBotIdx, botSymbol as 'X' | 'O');
             }
           }, remainingTime);
 
@@ -400,7 +552,22 @@ export default function Game() {
       // remove cleared ids from global list so restart won't try to clear them again
       botTimersRef.current = botTimersRef.current.filter((id) => !localTimers.includes(id));
     };
-  }, [xTurn, winner, board, gameStarted, mode, playerSymbol, isMegaBoard, isBlitzMode, difficulty, variant, boardSize, winLength, applyMove]);
+  }, [
+    xTurn,
+    winner,
+    board,
+    mode,
+    humanSymbol,
+    isMegaBoard,
+    isBlitzMode,
+    isReverseMode,
+    difficulty,
+    variant,
+    boardSize,
+    winLength,
+    applyMove,
+    checkWinnerWithCombo,
+  ]);
   // ----------------------------------------------------------------
 
   const getOldestMarkIndex = (player: 'X' | 'O'): number => {
@@ -416,44 +583,63 @@ export default function Game() {
   };
 
   const restart = () => {
+    const restartLockMs = 120;
+    navLockRef.current = Date.now() + restartLockMs;
+    postRestartLockRef.current = true;
+    setPostRestartLock(true);
+    if (postRestartTimerRef.current) {
+      window.clearTimeout(postRestartTimerRef.current);
+      postRestartTimerRef.current = null;
+    }
+    postRestartTimerRef.current = window.setTimeout(() => {
+      postRestartLockRef.current = false;
+      setPostRestartLock(false);
+      postRestartTimerRef.current = null;
+    }, restartLockMs);
     setBoard(Array(totalCells).fill(null));
-    setXTurn(getInitialTurn());
+    setXTurn(getInitialTurn(playerSymbol));
     setWinner(null);
     setWinningCombo(null);
     setModalVisible(false);
+    lastResultRef.current = null;
+    lastWinLineRef.current = null;
     moveHistory.current = [];
     setGameStarted(false);
+    setHumanSymbol(playerSymbol);
+    setAwaitingBotOpeningMove(shouldWaitForBotOpeningMove);
 
     // reset times to integer starting value
     setXTimeLeft(timePerMove);
     setOTimeLeft(timePerMove);
     xTimeDecimal.current = timePerMove;
     oTimeDecimal.current = timePerMove;
+    lastTickAtRef.current = null;
 
     setBotThinking(false);
     megaCacheRef.current = new Map();
     // invalidate any pending bot callbacks and clear scheduled timers
     botRunRef.current++;
-    for (const id of botTimersRef.current) {
-      try { window.clearTimeout(id); } catch (e) {}
-      try { window.cancelAnimationFrame(id); } catch (e) {}
-    }
-    botTimersRef.current = [];
+    clearBotTimers();
     if (timerRef.current) {
       window.clearInterval(timerRef.current);
       timerRef.current = null;
     }
   };
 
-  const goBack = () => navigate(-1);
+  const goBack = () => {
+    if (Date.now() < navLockRef.current) return;
+    navigate(-1);
+  };
 
   const handleQuit = () => {
+    if (Date.now() < navLockRef.current) return;
     setQuitModalVisible(false);
     goBack();
   };
 
-  const styles = getStyles(theme);
-
+  const styles = useMemo(() => getStyles(theme), [theme]);
+  const isResolvingWin = Boolean(winner && !modalVisible);
+  const controlsDisabled = isResolvingWin || awaitingBotOpeningMove || botThinking || postRestartLock;
   if (
     !variant ||
     ![
@@ -461,7 +647,7 @@ export default function Game() {
       'infinite',
       'blitz',
       'mega',
-      'swap',
+      'gravity',
       'reverse',
     ].includes(variant)
   ) {
@@ -528,48 +714,49 @@ export default function Game() {
               </div>
             </motion.div>
 
-            <div
-              style={{
-                height: 32,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              {botThinking && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.15 }}
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: theme.primary,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '6px 14px',
-                    borderRadius: 12,
-                    backgroundColor: theme.primary + '15',
-                    border: `1px solid ${theme.primary}40`,
-                  }}
-                >
+              <div
+                style={{
+                  height: mode === 'vsbot' ? 32 : 0,
+                  marginTop: mode === 'vsbot' ? 6 : 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {botThinking && (
                   <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.15 }}
                     style={{
-                      width: 10,
-                      height: 10,
-                      border: `2px solid ${theme.primary}`,
-                      borderTopColor: 'transparent',
-                      borderRadius: '50%',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: theme.primary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '6px 14px',
+                      borderRadius: 12,
+                      backgroundColor: theme.primary + '15',
+                      border: `1px solid ${theme.primary}40`,
                     }}
-                  />
-                  <span>{t('botThinking')}</span>
-                </motion.div>
-              )}
-            </div>
+                  >
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                      style={{
+                        width: 10,
+                        height: 10,
+                        border: `2px solid ${theme.primary}`,
+                        borderTopColor: 'transparent',
+                        borderRadius: '50%',
+                      }}
+                    />
+                    <span>{t('botThinking')}</span>
+                  </motion.div>
+                )}
+              </div>
           </div>
           )}
 
@@ -624,40 +811,48 @@ export default function Game() {
                 </div>
               </motion.div>
 
-              <div style={{ height: 28 }}>
-                {botThinking && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ duration: 0.15 }}
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: theme.primary,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 5,
-                      padding: '4px 12px',
-                      borderRadius: 10,
-                      backgroundColor: theme.primary + '15',
-                      border: `1px solid ${theme.primary}40`,
-                    }}
-                  >
+              <div
+                style={{
+                  height: mode === 'vsbot' ? 28 : 0,
+                  marginTop: mode === 'vsbot' ? 4 : 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                  {botThinking && (
                     <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.15 }}
                       style={{
-                        width: 8,
-                        height: 8,
-                        border: `2px solid ${theme.primary}`,
-                        borderTopColor: 'transparent',
-                        borderRadius: '50%',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: theme.primary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '4px 12px',
+                        borderRadius: 10,
+                        backgroundColor: theme.primary + '15',
+                        border: `1px solid ${theme.primary}40`,
                       }}
-                    />
-                    <span>{t('botThinking')}</span>
-                  </motion.div>
-                )}
+                    >
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        style={{
+                          width: 8,
+                          height: 8,
+                          border: `2px solid ${theme.primary}`,
+                          borderTopColor: 'transparent',
+                          borderRadius: '50%',
+                        }}
+                      />
+                      <span>{t('botThinking')}</span>
+                    </motion.div>
+                  )}
               </div>
             </div>
           )}
@@ -671,6 +866,8 @@ export default function Game() {
             winningCombo={winningCombo}
             winningPlayer={winner && winner !== 'draw' ? winner : null}
             boardSize={isMegaBoard ? boardSize : 3}
+            gravityMode={isGravityMode}
+            interactionDisabled={isResolvingWin || awaitingBotOpeningMove || botThinking || postRestartLock}
             totalSize={boardDisplaySize}
             cellSize={
               isMegaBoard ? Math.min((boardDisplaySize - 6 - 3 * (boardSize - 1)) / boardSize, 70) : undefined
@@ -681,26 +878,49 @@ export default function Game() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} style={styles.controls}>
-          <button
-            style={{ ...styles.button, ...styles.restartButton }}
-            onClick={restart}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = `0 6px 16px ${theme.shadow}`;
-            }}
+        <button
+          style={{
+            ...styles.button,
+            ...styles.restartButton,
+            opacity: controlsDisabled ? 0.6 : 1,
+            cursor: controlsDisabled ? 'default' : 'pointer',
+          }}
+          onClick={() => {
+            if (controlsDisabled) return;
+            if (Date.now() < navLockRef.current) return;
+            playSound('tap');
+            restart();
+          }}
+              onMouseEnter={(e) => {
+                if (controlsDisabled) return;
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = `0 6px 16px ${theme.shadow}`;
+              }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = `0 2px 8px ${theme.shadow}`;
             }}
+            disabled={controlsDisabled}
           >
             {React.createElement(IoRefresh as any, { size: 20 })}
             {t('restart')}
           </button>
 
           <button
-            style={{ ...styles.button, ...styles.quitButton }}
-            onClick={() => setQuitModalVisible(true)}
+            style={{
+              ...styles.button,
+              ...styles.quitButton,
+              opacity: controlsDisabled ? 0.6 : 1,
+              cursor: controlsDisabled ? 'default' : 'pointer',
+            }}
+            onClick={() => {
+              if (controlsDisabled) return;
+              if (Date.now() < navLockRef.current) return;
+              playSound('tap');
+              setQuitModalVisible(true);
+            }}
             onMouseEnter={(e) => {
+              if (controlsDisabled) return;
               e.currentTarget.style.transform = 'translateY(-2px)';
               e.currentTarget.style.boxShadow = `0 6px 16px ${theme.shadow}`;
             }}
@@ -708,6 +928,7 @@ export default function Game() {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = `0 2px 8px ${theme.shadow}`;
             }}
+            disabled={controlsDisabled}
           >
             {React.createElement(IoExit as any, { size: 20 })}
             {t('exit')}
@@ -721,6 +942,7 @@ export default function Game() {
         message={modalMessage}
         onRestart={restart}
         onClose={goBack}
+        playSound={playSound}
         theme={theme}
         t={t}
         winner={winner}
@@ -733,6 +955,7 @@ export default function Game() {
         message={t('quitGameMessage')}
         onConfirm={handleQuit}
         onCancel={() => setQuitModalVisible(false)}
+        playSound={playSound}
         theme={theme}
         t={t}
       />

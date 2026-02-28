@@ -1,33 +1,34 @@
 // src/components/ResultModal.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { SoundId } from "../utils/sound";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   IoTrophy,
   IoHandLeftOutline,
   IoRefresh,
-  IoHome,
+  IoArrowBack,
   IoCloseCircle,
   IoSparkles,
 } from "react-icons/io5";
-
 interface ResultModalProps {
   visible: boolean;
   title: string;
   message?: string;
   onRestart: () => void;
   onClose: () => void;
+  playSound: (sound: SoundId) => void;
   theme: any;
   t: (key: string) => string;
   winner?: "X" | "O" | "draw" | null;
   isDraw?: boolean;
 }
-
 export default function ResultModal({
   visible,
   title,
   message,
   onRestart,
   onClose,
+  playSound,
   theme,
   t,
   winner,
@@ -35,14 +36,11 @@ export default function ResultModal({
 }: ResultModalProps) {
   const isVictory = !!message && message.includes(t("youWin"));
   const isDefeat = !!message && message.includes(t("youLose"));
-
   const [showConfetti, setShowConfetti] = useState(false);
   const [showStars, setShowStars] = useState(false);
-
-  // ✅ Button cooldown state
   const [buttonsEnabled, setButtonsEnabled] = useState(false);
-
-  // Confetti & stars timing
+  const [actionLocked, setActionLocked] = useState(false);
+  const actionLockRef = useRef(false);
   useEffect(() => {
     if (visible && !isDraw && !isDefeat) {
       const confettiTimer = setTimeout(() => setShowConfetti(true), 150);
@@ -56,20 +54,27 @@ export default function ResultModal({
       setShowStars(false);
     }
   }, [visible, isDraw, isDefeat]);
-
-  // Enable buttons shortly after modal becomes visible
   useEffect(() => {
     if (visible) {
       setButtonsEnabled(false);
-      // Enable after 1.1s (just before main animations complete)
+      setActionLocked(false);
+      actionLockRef.current = false;
       const timer = setTimeout(() => setButtonsEnabled(true), 1100);
       return () => clearTimeout(timer);
     } else {
       setButtonsEnabled(false);
+      // Keep modal non-interactive during exit animation.
+      setActionLocked(true);
+      actionLockRef.current = true;
     }
   }, [visible]);
-
-  // Confetti particle generator
+  const runSingleAction = (action: () => void) => {
+    if (!buttonsEnabled || actionLockRef.current) return;
+    actionLockRef.current = true;
+    setActionLocked(true);
+    setButtonsEnabled(false);
+    action();
+  };
   const confettiParticles = Array.from({ length: 16 }, (_, i) => {
     const angle = (i / 16) * Math.PI * 2;
     const distance = 120 + Math.random() * 20;
@@ -89,8 +94,6 @@ export default function ResultModal({
       scale: 0.8 + Math.random() * 0.4,
     };
   });
-
-  // Floating stars for victory
   const stars = Array.from({ length: 8 }, (_, i) => ({
     id: i,
     x: (Math.random() - 0.5) * 200,
@@ -98,8 +101,6 @@ export default function ResultModal({
     delay: 0.3 + i * 0.1,
     duration: 1.5 + Math.random() * 0.5,
   }));
-
-  // Determine icon & colors
   const getResultStyle = () => {
     if (isVictory) {
       return { Icon: IoTrophy, iconColor: theme.primary, iconSize: 72 };
@@ -115,9 +116,7 @@ export default function ResultModal({
       return { Icon: IoTrophy, iconColor: theme.primary, iconSize: 72 };
     }
   };
-
   const style = getResultStyle();
-
   return (
     <AnimatePresence>
       {visible && (
@@ -135,8 +134,12 @@ export default function ResultModal({
             alignItems: "center",
             zIndex: 1000,
             padding: 20,
+            pointerEvents: visible ? "auto" : "none",
           }}
-          onClick={onClose}
+          onClick={() => {
+            if (!buttonsEnabled || actionLockRef.current) return;
+            runSingleAction(() => onClose());
+          }}
         >
           <motion.div
             initial={{ scale: 0.8, opacity: 0, y: 20 }}
@@ -163,7 +166,6 @@ export default function ResultModal({
               overflow: "visible",
             }}
           >
-            {/* Confetti explosion */}
             {!isDraw && !isDefeat && showConfetti && (
               <div
                 style={{
@@ -209,8 +211,6 @@ export default function ResultModal({
                 ))}
               </div>
             )}
-
-            {/* Floating stars */}
             {isVictory && showStars && (
               <>
                 {stars.map((star) => (
@@ -243,8 +243,6 @@ export default function ResultModal({
                 ))}
               </>
             )}
-
-            {/* Result icon */}
             <motion.div
               initial={{ scale: 0, rotate: isDefeat ? 0 : -180 }}
               animate={{
@@ -275,8 +273,6 @@ export default function ResultModal({
                 color: style.iconColor,
               })}
             </motion.div>
-
-            {/* Title */}
             <motion.h2
               initial={{ opacity: 0, y: 20, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -292,8 +288,6 @@ export default function ResultModal({
             >
               {title}
             </motion.h2>
-
-            {/* Message */}
             {message && (
               <motion.p
                 initial={{ opacity: 0 }}
@@ -310,8 +304,6 @@ export default function ResultModal({
                 {message}
               </motion.p>
             )}
-
-            {/* Action buttons */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -323,12 +315,20 @@ export default function ResultModal({
                 width: "100%",
               }}
             >
-              {/* Play Again */}
               <motion.button
-                whileHover={buttonsEnabled ? { scale: 1.02, y: -2 } : {}}
-                whileTap={buttonsEnabled ? { scale: 0.98 } : {}}
-                onClick={buttonsEnabled ? onRestart : undefined}
-                disabled={!buttonsEnabled}
+                whileHover={buttonsEnabled && !actionLocked ? { scale: 1.02, y: -2 } : {}}
+                whileTap={buttonsEnabled && !actionLocked ? { scale: 0.98 } : {}}
+                onClick={
+                  buttonsEnabled && !actionLocked
+                    ? () => {
+                        runSingleAction(() => {
+                        playSound('tap');
+                        onRestart();
+                        });
+                      }
+                    : undefined
+                }
+                disabled={!buttonsEnabled || actionLocked}
                 style={{
                   width: "100%",
                   padding: "16px 24px",
@@ -340,24 +340,31 @@ export default function ResultModal({
                   justifyContent: "center",
                   gap: 10,
                   border: "none",
-                  cursor: buttonsEnabled ? "pointer" : "not-allowed",
+                  cursor: buttonsEnabled && !actionLocked ? "pointer" : "not-allowed",
                   fontWeight: 700,
                   fontSize: 17,
                   boxShadow: `0 4px 16px ${theme.primary}40`,
                   transition: "all 0.2s",
-                  opacity: buttonsEnabled ? 1 : 0.6,
+                  opacity: buttonsEnabled && !actionLocked ? 1 : 0.6,
                 }}
               >
                 {React.createElement(IoRefresh as any, { size: 22, color: "#FFFFFF" })}
                 <span>{t("playAgain")}</span>
               </motion.button>
-
-              {/* Main Menu */}
               <motion.button
-                whileHover={buttonsEnabled ? { scale: 1.02 } : {}}
-                whileTap={buttonsEnabled ? { scale: 0.98 } : {}}
-                onClick={buttonsEnabled ? onClose : undefined}
-                disabled={!buttonsEnabled}
+                whileHover={buttonsEnabled && !actionLocked ? { scale: 1.02 } : {}}
+                whileTap={buttonsEnabled && !actionLocked ? { scale: 0.98 } : {}}
+                onClick={
+                  buttonsEnabled && !actionLocked
+                    ? () => {
+                        runSingleAction(() => {
+                        playSound('tap');
+                        onClose();
+                        });
+                      }
+                    : undefined
+                }
+                disabled={!buttonsEnabled || actionLocked}
                 style={{
                   width: "100%",
                   padding: "14px 24px",
@@ -369,15 +376,15 @@ export default function ResultModal({
                   justifyContent: "center",
                   gap: 10,
                   border: `2px solid ${theme.border}`,
-                  cursor: buttonsEnabled ? "pointer" : "not-allowed",
+                  cursor: buttonsEnabled && !actionLocked ? "pointer" : "not-allowed",
                   fontWeight: 600,
                   fontSize: 16,
                   transition: "all 0.2s",
-                  opacity: buttonsEnabled ? 1 : 0.6,
+                  opacity: buttonsEnabled && !actionLocked ? 1 : 0.6,
                 }}
               >
-                {React.createElement(IoHome as any, { size: 20, color: theme.text })}
-                <span>{t("mainMenu")}</span>
+                {React.createElement(IoArrowBack as any, { size: 20, color: theme.text })}
+                <span>{t("back")}</span>
               </motion.button>
             </motion.div>
           </motion.div>

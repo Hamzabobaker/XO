@@ -1,30 +1,29 @@
 // src/theme.ts
 export const lightTheme = {
-  background: '#F8FAFC',
-  surface: '#FFFFFF',
-  surfaceVariant: '#F1F5F9',
+  background: '#EEF1FA',
+  surface: '#FBFCFF',
+  surfaceVariant: '#E8ECF8',
   primary: '#3B82F6',
   secondary: '#EF4444',
   accent: '#8B5CF6',
-  text: '#0F172A',
-  textSecondary: '#475569',
-  border: '#CBD5E1',
+  text: '#0B1220',
+  textSecondary: '#4B5563',
+  border: '#C6D0E1',
   xColor: '#3B82F6',
   oColor: '#EF4444',
   winLine: '#10B981',
-  modalOverlay: 'rgba(15, 23, 42, 0.80)',
-  shadow: 'rgba(15, 23, 42, 0.10)',
-  cardShadow: 'rgba(59, 130, 246, 0.08)',
-  gradientStart: '#E0E7FF',
-  gradientEnd: '#F8FAFC', 
-  cardBorder: '#C7D2FE',
-  hoverGlow: 'rgba(59, 130, 246, 0.12)',
-  boardBg: '#E0E7FF',
-  cellBg: '#FFFFFF',
-  cellBorder: '#C7D2FE',
-  cellShadow: 'rgba(59, 130, 246, 0.12)',
+  modalOverlay: 'rgba(15, 23, 42, 0.68)',
+  shadow: 'rgba(15, 23, 42, 0.12)',
+  cardShadow: 'rgba(59, 130, 246, 0.12)',
+  gradientStart: '#E1E8FF',
+  gradientEnd: '#F3F5FF',
+  cardBorder: '#BCC8E8',
+  hoverGlow: 'rgba(59, 130, 246, 0.16)',
+  boardBg: '#E2E7F8',
+  cellBg: '#FCFDFF',
+  cellBorder: '#BCC8E8',
+  cellShadow: 'rgba(59, 130, 246, 0.16)',
 };
-
 export const darkTheme = {
   background: '#0A0E1A',
   surface: '#151B2E',
@@ -50,5 +49,4 @@ export const darkTheme = {
   cellBorder: '#334155',
   cellShadow: 'rgba(0, 0, 0, 0.3)',
 };
-
 export type Theme = typeof lightTheme;

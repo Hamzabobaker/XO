@@ -1,9 +1,7 @@
 // src/components/ModeCard.tsx
 import React from 'react';
 import { motion } from 'framer-motion';
-
 interface ModeCardProps {
-  id: string;
   title: string;
   description: string;
   icon: any;
@@ -11,13 +9,13 @@ interface ModeCardProps {
   isComingSoon?: boolean;
   badge?: string;
   onPress: () => void;
-  onLongPress?: () => void;
+  layoutId?: string;
+  styleOverride?: React.CSSProperties;
   theme: any;
   t: (key: string) => string;
   isRTL?: boolean;
 }
-
-export default function ModeCard({
+function ModeCard({
   title,
   description,
   icon,
@@ -25,15 +23,20 @@ export default function ModeCard({
   isComingSoon = false,
   badge,
   onPress,
+  layoutId,
+  styleOverride,
   theme,
   t,
   isRTL = false,
 }: ModeCardProps) {
   return (
     <motion.div
+      layout={layoutId ? true : undefined}
+      layoutId={layoutId}
       whileHover={!isComingSoon ? { y: -4, scale: 1.02 } : {}}
       whileTap={!isComingSoon ? { scale: 0.98 } : {}}
       transition={{
+        layout: { type: 'spring', stiffness: 190, damping: 22, mass: 0.9 },
         scale: { duration: 0.2, ease: 'easeOut' },
         y: { duration: 0 },
       }}
@@ -84,6 +87,9 @@ export default function ModeCard({
         WebkitTapHighlightColor: 'transparent',
         outline: 'none',
         userSelect: 'none' as const,
+        willChange: 'transform',
+        backfaceVisibility: 'hidden' as const,
+        ...styleOverride,
       }}
     >
       {!isComingSoon && (
@@ -101,7 +107,6 @@ export default function ModeCard({
           }}
         />
       )}
-
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
         <div
           style={{
@@ -131,7 +136,6 @@ export default function ModeCard({
           </div>
         )}
       </div>
-
       <h3
         style={{
           fontSize: 16,
@@ -146,7 +150,6 @@ export default function ModeCard({
       >
         {title}
       </h3>
-
       <p
         style={{
           fontSize: 12,
@@ -163,7 +166,6 @@ export default function ModeCard({
       >
         {description}
       </p>
-
       {isComingSoon && (
         <div
           style={{
@@ -184,3 +186,5 @@ export default function ModeCard({
     </motion.div>
   );
 }
+
+export default React.memo(ModeCard);

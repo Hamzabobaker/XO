@@ -1,24 +1,25 @@
 // src/components/ConfirmModal.tsx
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SoundId } from '../utils/sound';
 import { IoHelpCircle, IoClose, IoCheckmark } from 'react-icons/io5';
-
 interface ConfirmModalProps {
   visible: boolean;
   title: string;
   message: string;
   onConfirm: () => void;
   onCancel: () => void;
+  playSound: (sound: SoundId) => void;
   theme: any;
   t: (k: string) => string;
 }
-
 export default function ConfirmModal({
   visible,
   title,
   message,
   onConfirm,
   onCancel,
+  playSound,
   theme,
   t,
 }: ConfirmModalProps) {
@@ -66,7 +67,6 @@ export default function ConfirmModal({
             >
               {React.createElement(IoHelpCircle as any, { size: 56, color: theme.secondary })}
             </motion.div>
-
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -75,7 +75,6 @@ export default function ConfirmModal({
             >
               {title}
             </motion.div>
-
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -89,7 +88,6 @@ export default function ConfirmModal({
             >
               {message}
             </motion.div>
-
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -97,7 +95,10 @@ export default function ConfirmModal({
               style={{ display: 'flex', gap: 12 }}
             >
               <button
-                onClick={onCancel}
+                onClick={() => {
+                  playSound('tap');
+                  onCancel();
+                }}
                 style={{
                   flex: 1,
                   padding: '14px 20px',
@@ -126,9 +127,11 @@ export default function ConfirmModal({
                 {React.createElement(IoClose as any, { size: 20, color: theme.text })}
                 <span>{t('cancel')}</span>
               </button>
-
               <button
-                onClick={onConfirm}
+                onClick={() => {
+                  playSound('tap');
+                  onConfirm();
+                }}
                 style={{
                   flex: 1,
                   padding: '14px 20px',

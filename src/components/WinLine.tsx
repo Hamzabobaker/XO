@@ -2,30 +2,29 @@
 import React from 'react';
 import { useApp } from '../context';
 import { motion } from 'framer-motion';
-
 interface WinLineProps {
   combo: number[];
   boardSize: number;
   totalSize: number;
   color: string;
   cellSize: number;
-  optimizeForMobile?: boolean;
   gap?: number;
   padding?: number;
+  offsetX?: number;
+  offsetY?: number;
 }
-
-export default function WinLine({
+function WinLine({
   combo,
   boardSize,
   totalSize,
   color,
   cellSize,
-  optimizeForMobile = false,
   gap = 6,
   padding = 6,
+  offsetX,
+  offsetY,
 }: WinLineProps) {
   const { actualThemeMode } = useApp();
-
   const hexToRgb = (hex: string) => {
     if (!hex) return null;
     const h = hex.replace('#', '');
@@ -43,7 +42,6 @@ export default function WinLine({
     }
     return null;
   };
-
   const rgba = (c: string, a: number) => {
     if (!c) return c;
     if (c.startsWith('rgba') || c.startsWith('rgb')) return c;
@@ -51,29 +49,24 @@ export default function WinLine({
     if (!rgb) return c;
     return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${a})`;
   };
-
   const tonedColor = actualThemeMode === 'light' ? rgba(color, 0.75) : color;
   const shadowColor = actualThemeMode === 'light' ? rgba(color, 0.45) : `${color}66`;
+  const baseX = offsetX ?? padding;
+  const baseY = offsetY ?? padding;
   const getCenter = (idx: number) => {
     const row = Math.floor(idx / boardSize);
     const col = idx % boardSize;
     return {
-      x: padding + col * (cellSize + gap) + cellSize / 2,
-      y: padding + row * (cellSize + gap) + cellSize / 2,
+      x: baseX + col * (cellSize + gap) + cellSize / 2,
+      y: baseY + row * (cellSize + gap) + cellSize / 2,
     };
   };
-
   if (!combo || combo.length < 2) {
     return null;
   }
-
   const start = getCenter(combo[0]);
   const end = getCenter(combo[combo.length - 1]);
-
-  const lineThickness = Math.max(3, Math.round(cellSize * (optimizeForMobile ? 0.07 : 0.10)));
-
-  // SVG width/height — ensure it covers the board
-  // Could also use totalSize + padding*2, but using 100% to cover container
+  const lineThickness = Math.max(4, Math.round(cellSize * 0.10));
   return (
     <svg
       style={{
@@ -85,36 +78,23 @@ export default function WinLine({
         pointerEvents: 'none',
       }}
     >
-      {optimizeForMobile ? (
-        <line
-          x1={start.x}
-          y1={start.y}
-          x2={end.x}
-          y2={end.y}
-          stroke={tonedColor}
-          strokeWidth={lineThickness}
-          strokeLinecap="round"
-          style={{
-            filter: `drop-shadow(0 0 ${Math.max(4, lineThickness)}px ${shadowColor})`,
-          }}
-        />
-      ) : (
-        <motion.line
-          x1={start.x}
-          y1={start.y}
-          x2={end.x}
-          y2={end.y}
-          stroke={tonedColor}
-          strokeWidth={lineThickness}
-          strokeLinecap="round"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
-          style={{
-            filter: `drop-shadow(0 0 ${Math.max(6, lineThickness)}px ${shadowColor})`,
-          }}
-        />
-      )}
+      <motion.line
+        x1={start.x}
+        y1={start.y}
+        x2={end.x}
+        y2={end.y}
+        stroke={tonedColor}
+        strokeWidth={lineThickness}
+        strokeLinecap="round"
+        initial={{ pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        style={{
+          filter: `drop-shadow(0 0 ${Math.max(6, lineThickness)}px ${shadowColor})`,
+        }}
+      />
     </svg>
   );
 }
+
+export default React.memo(WinLine);

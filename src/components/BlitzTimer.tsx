@@ -1,7 +1,6 @@
 // src/components/BlitzTimer.tsx
 import React from 'react';
 import { motion } from 'framer-motion';
-
 interface Props {
   timeLeft: number;      // seconds with decimals from Game.tsx
   totalTime: number;
@@ -11,8 +10,7 @@ interface Props {
   playerLabel?: string;
   t?: (key: string) => string;
 }
-
-export default function BlitzTimer({
+function BlitzTimer({
   timeLeft,
   totalTime,
   isActive,
@@ -21,21 +19,15 @@ export default function BlitzTimer({
   playerLabel,
   t,
 }: Props) {
-  // Ensure non-negative value
   const safe = Math.max(0, Number(timeLeft) || 0);
-  // Format to two decimals (keeps trailing zero)
   const display = safe.toFixed(2);
-
   const secsRounded = Math.ceil(safe);
   const isLow = secsRounded <= 3;
   const isCritical = secsRounded <= 1;
-
   const playerColor = playerLabel === 'X' ? theme.xColor : theme.oColor;
   const barColor = isCritical ? theme.secondary : isLow ? '#F59E0B' : playerColor;
-
   const rectWidth = size * 1.8;
   const percentage = totalTime > 0 ? Math.max(0, Math.min(100, (safe / totalTime) * 100)) : 0;
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: rectWidth }}>
       <motion.div
@@ -56,7 +48,6 @@ export default function BlitzTimer({
           overflow: 'hidden',
         }}
       >
-        {/* progress background */}
         <motion.div
           animate={{ width: `${percentage}%` }}
           transition={{ duration: 0.12 }}
@@ -69,8 +60,6 @@ export default function BlitzTimer({
             zIndex: 0,
           }}
         />
-
-        {/* Time text — using the same simple font style as your old file */}
         <div
           aria-live="polite"
           style={{
@@ -78,7 +67,6 @@ export default function BlitzTimer({
             fontSize: size * 0.45, // same scale as old file
             fontWeight: 700,       // same as old file
             color: isLow ? theme.secondary : theme.text,
-            // NOTE: no custom fontFamily — uses app/default font like the old file
             letterSpacing: '0.01em',
             textShadow: isActive ? `0 3px 12px ${barColor}50` : `0 1px 3px ${theme.shadow}`,
             lineHeight: 1,
@@ -90,7 +78,6 @@ export default function BlitzTimer({
           {display}
         </div>
       </motion.div>
-
       {playerLabel && (
         <div
           style={{
@@ -109,3 +96,5 @@ export default function BlitzTimer({
     </div>
   );
 }
+
+export default React.memo(BlitzTimer);
