@@ -11,3 +11,8 @@
 - Added vs bot for Mega board mode
 - Improved Blitz timers and animations
 - Fixed RTL layout issues and language support
+
+## v1.2.1 — Minor updates & content (2026-03-10)
+
+- Updated creator description and About page content
+- Minor documentation and metadata updates (version bump)

@@ -80,37 +80,15 @@ const en: Translations = {
   createdBy: 'Created by Hamza',
   creatorDesc: `This is Hamza.
 
-He was 21 when he built this app. a university student from Libya.
+He was 21 at the time and a university student from Libya when he made XO as part of a university project.
 
-He describes himself as ordinary, and he doesn’t feel the need to exaggerate that.
+At first, it was just a simple idea, but he ended up building it more seriously to practice what he had learned and make something clean and balanced. He likes things clear and simple, so he made sure the game feels fair, and every detail works the way it should.
 
-Hamza likes games, not just playing them, but understanding them.
-How systems work. Why they feel balanced. Why they break.
-His attention naturally goes to those details.
+The game is built with TypeScript and React, everything is hard-coded, and the AI actually thinks. It blocks, plans ahead, and adjusts its strategy depending on difficulty, Easy is relaxed while Impossible uses deeper calculations and precise strategies.
 
-If something feels slightly off, he notices.
-Even if nobody asks, he ends up fixing it in his head.
+The AI adapts to difficulty settings, from casual and unpredictable on Easy to highly tactical on Impossible, blocking moves, creating forks, and planning several steps ahead. Every match manages board state, turns, and win conditions carefully, with higher difficulties using deeper calculations and more precise strategies.
 
-He likes cars for similar reasons,
-precision, response, and the way engineering turns intention into movement.
-
-Languages interest him the same way.
-Grammar, structure, patterns.
-Once you understand the foundation, the rest becomes manageable.
-
-He prefers clarity.
-Clear rules.
-Clean design.
-No unnecessary complexity.
-
-He once participated in a project for a tournament,
-where he learned the basics of building a web application.
-
-Because of that experience, he ended up building a simple XO game
-mostly out of habit, just to put what he learned into practice.
-
-It was a way to apply what he had learned and revisit the fundamentals,
-building something clean and well structured.`,
+Sound was implemented directly in the code using the Web Audio API, generating tones and effects for taps, moves, wins, draws, etc. All audio is code-generated, with no external files, and is tied directly to game actions for consistency and clarity.`,
   modeDetails: 'Mode Details',
   comingSoon: 'Coming Soon',
   seconds: 's',
@@ -206,41 +184,33 @@ const ar: Translations = {
   createdBy: 'صنع بواسطة حمزة',
   creatorDesc: `هذا حمزة.
 
-عمره واحد وعشرين سنة وقت ما دار هالتطبيق،
-وهو طالب جامعي من ليبيا.
+كان عمره واحد وعشرون عامًا عندما صنع XO كجزء من مشروع جامعي،
+وكان طالبًا في الجامعة من ليبيا.
 
-يقول عن نفسه إنه "شخص عادي"
-ولا يشعر أنه بحاجة إلى تغيير هذا الوصف.
+في البداية كانت الفكرة بسيطة،
+لكن قرر تطويرها بجدية لتطبيق ما تعلّمه وإنتاج شيء منظم ومتوازن.
 
-حمزة يحب الألعاب.
-ليس فقط لعبها، بل فهمها أيضًا.
-يهتم بالأنظمة والميكانيكيات،
-ولماذا ينجح شيء ولماذا يفشل.
+يحب الأشياء الواضحة والبسيطة،
+لذلك حرص على أن تكون اللعبة عادلة،
+وأن تعمل كل التفاصيل كما ينبغي.
 
-يلتقط تفاصيل التوازن،
-ويلاحظ عندما يكون هناك شيء غير مضبوط حتى لو كان بسيطًا،
-ويصلحه في ذهنه حتى عندما لا يطلب منه أحد ذلك.
+اللعبة مبنية باستخدام TypeScript وReact،
+والكود مكتوب مباشرة بالكامل،
+والذكاء الاصطناعي يفكر فعليًا،
+يقوم بالصد والتخطيط للأمام،
+ويعدل استراتيجيته حسب مستوى الصعوبة.
+في مستوى سهل يكون اللعب مريحًا،
+أما في مستوى مستحيل فتُستخدم حسابات أعمق واستراتيجيات دقيقة.
 
-ويحب السيارات للسبب نفسه،
-الدقة، والاستجابة،
-وهندسة تحوّل الفكرة إلى حركة.
+يغير الذكاء الاصطناعي سلوكه وفقًا للصعوبة،
+من حركات عشوائية ومريحة في السهل
+إلى استراتيجيات متقدمة مثل صد الحركات، إنشاء الفُرَق، والتخطيط لعدة خطوات في المستحيل.
+تُدار كل مباراة بعناية من حيث حالة اللوحة، الأدوار، وشروط الفوز.
 
-ويدرس اللغات لأنها أنظمة أيضًا.
-النحو، والبنية، والأنماط.
-لما تفهم الأساس، يصير الباقي أسهل.
-
-يميل إلى الأشياء الواضحة والمنطقية.
-قواعد واضحة.
-تصميم نظيف.
-من دون تعقيد غير ضروري.
-
-أنا شاركت من قبل في مشروع ضمن بطولة معيّنة.
-التجربة علمتني الأساسيات في كيف ندير تطبيق ويب،
-وعطتني فكرة أوضح على الشغل خطوة بخطوة.
-
-وبسبب ذلك، درت لعبة "إكس أو" من باب العادة،
-عشان نطبّق اللي تعلّمته ونراجع الأساسيات،
-ونطلع حاجة مرتبة وواضحة.`,
+تمت إضافة الأصوات مباشرة في الكود باستخدام Web Audio API،
+حيث يتم توليد نغمات وتأثيرات للنقر، الحركة، الفوز، التعادل، وغيرها.
+كل الصوتيات مولدة برمجيًا، دون استخدام ملفات خارجية،
+ومرتبطة مباشرة بأحداث اللعبة.`,
   modeDetails: 'تفاصيل الوضع',
   comingSoon: 'قريباً',
   seconds: 'ث',
@@ -334,42 +304,19 @@ const ja: Translations = {
   multiLanguage: '英語・アラビア語・日本語に対応',
   darkMode: 'ライト/ダークテーマ',
   createdBy: '制作：ハムザ',
-  creatorDesc: `これはハムザの話。
+creatorDesc: `これはハムザ。
 
-このアプリを作った時点で、彼は21歳、リビア出身の大学生だ。
+XOを大学の課題として作ったとき、彼は21歳でリビア出身の大学生だった。
 
-自分のことを「普通の人だ」と言う。
-わざわざ大きく見せようとは思っていない。
+最初はちょっとした思いつきだったが、学んだことを試すつもりで、本気でバランスの取れたものを作った。
 
-ハムザはゲームが好きだ。
-ただ遊ぶだけではなく、仕組みを理解するのが好きだ。
-なぜうまく機能するのか。なぜうまくいかなくなるのか。
-そういう部分に自然と目がいく。
+シンプルで分かりやすいものが好きなので、ゲームが公平に感じられるように、細かい部分まで気を配っている。
 
-少しでもバランスが崩れていれば気づくし、
-頼まれていなくても頭の中で直してしまう。
+ゲームはTypeScriptとReactで作られていて、すべてコードに直接実装されている。AIはちゃんと考えて動き、ブロックしたり先を読んだり、難易度に応じて戦略を変える。簡単では気楽に動き、無理では深い計算と精密な戦略を使う。
 
-車が好きなのも同じ理由だ。
-精度やレスポンス。
-意図がそのまま動きに変わる感覚。
+AIは難易度に合わせて挙動を変え、簡単ではカジュアルで予測しにくい動き、無理ではブロックやフォーク作成、数手先の計画など、高度な戦術を行う。各対局は盤面、ターン、勝利条件をきちんと管理しており、高難度ほど計算も戦略も精密になる。
 
-言語にも同じような面白さを感じている。
-文法や構造、パターン。
-土台が分かれば、あとは整理できる。
-
-はっきりしているものが好きだ。
-明確なルール。
-無駄のないデザイン。
-
-以前、ある大会でプロジェクトに参加したことがある。
-そこでWebアプリの基礎を学んだ。
-
-その経験があったから、
-自然な流れでシンプルなXO（エックスオー）のゲームを作った。
-特別な理由というより、習慣の延長のようなものだ。
-
-学んだことを整理して、
-もう一度基礎を確認するための一歩だった。`,
+音はWeb Audio APIでコード内から生成され、タップや移動、勝利、引き分けなどの効果音を作っている。外部ファイルは使わず、すべてゲームの動作に直接結び付けられている。`,
   modeDetails: 'モード詳細',
   comingSoon: '近日公開',
   seconds: '秒',
